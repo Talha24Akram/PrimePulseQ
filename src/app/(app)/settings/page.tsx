@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { useSearchParams } from "next/navigation";
 import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +11,14 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useProfile } from "@/hooks/useProfile";
+import { TierGate } from "@/components/tier-gate";
+import { TIER_LABELS, canAccess } from "@/lib/tiers";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const [company, setCompany] = useState({ name: "Acme Inc.", slug: "acme", website: "https://acme.com" });
+  const { profile, loading: profileLoading, updateProfile } = useProfile();
+  const [company, setCompany] = useState({ name: "", slug: "", website: "" });
   const [notifications, setNotifications] = useState({
     new_responses: true,
     weekly_summary: true,
@@ -22,13 +27,43 @@ export default function SettingsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get("tab") ?? "company";
+  const tier = profile?.subscription_tier ?? "free";
+  const isOwner = profile?.is_owner ?? false;
+
+  // Populate fields from profile once loaded
+  useEffect(() => {
+    if (profile) {
+      setCompany({
+        name: profile.company_name ?? "",
+        slug: profile.company_slug ?? "",
+        website: profile.company_website ?? "",
+      });
+    }
+  }, [profile]);
 
   async function handleSave() {
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
+    setSaveError("");
+    const { error } = await updateProfile({
+      company_name: company.name || null,
+      company_slug: company.slug || null,
+      company_website: company.website || null,
+    });
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (error) {
+      setSaveError(error);
+    } else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
+  }
+
+  if (profileLoading) {
+    return <div className="p-8 flex items-center justify-center"><div className="text-gray-400 text-sm">Loading settings...</div></div>;
   }
 
   return (
@@ -38,7 +73,7 @@ export default function SettingsPage() {
         <p className="text-gray-500 text-sm mt-1">Manage your workspace preferences</p>
       </div>
 
-      <Tabs defaultValue="company">
+      <Tabs defaultValue={defaultTab}>
         <TabsList className="mb-6 sm:mb-8 flex-wrap h-auto gap-1">
           <TabsTrigger value="company" className="gap-2">
             <Building2 className="h-3.5 w-3.5" /> Company
@@ -93,6 +128,11 @@ export default function SettingsPage() {
                   placeholder="https://"
                 />
               </div>
+              {saveError && (
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-sm text-red-600 dark:text-red-400">
+                  {saveError}
+                </div>
+              )}
               <div className="pt-2 flex items-center gap-3">
                 <Button onClick={handleSave} disabled={saving}>
                   {saving ? "Saving..." : "Save changes"}
@@ -208,24 +248,66 @@ export default function SettingsPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Current Plan</CardTitle>
-                <Badge>Starter</Badge>
+                <Badge>{isOwner ? "Owner (Enterprise)" : TIER_LABELS[tier]}</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-end gap-1 mb-4">
-                <span className="text-4xl font-bold text-gray-900 dark:text-white">$49</span>
-                <span className="text-gray-500 text-sm mb-1">/month</span>
-              </div>
-              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-6">
-                {["Up to 100 employees", "Weekly pulse surveys", "Basic analytics", "Email support"].map((f) => (
-                  <div key={f} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-violet-600" />
-                    {f}
+              {tier === "free" && (
+                <>
+                  <p className="text-sm text-gray-500 mb-4">You&apos;re on the free plan. Upgrade to unlock surveys, analytics, and more.</p>
+                  <Button className="w-full mb-2">Upgrade to Starter — $49/mo</Button>
+                  <p className="text-xs text-gray-400 text-center">Up to 100 employees · Weekly surveys · Basic analytics</p>
+                </>
+              )}
+              {tier === "starter" && (
+                <>
+                  <div className="flex items-end gap-1 mb-4">
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">$49</span>
+                    <span className="text-gray-500 text-sm mb-1">/month</span>
                   </div>
-                ))}
-              </div>
-              <Button className="w-full">Upgrade to Growth — $149/mo</Button>
-              <p className="text-xs text-gray-400 text-center mt-2">Up to 500 employees · Slack, burnout detection, advanced analytics · 1 week free</p>
+                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-6">
+                    {["Up to 100 employees", "Weekly pulse surveys", "Basic analytics", "Email support"].map((f) => (
+                      <div key={f} className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-violet-600" />{f}
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="w-full">Upgrade to Growth — $149/mo</Button>
+                  <p className="text-xs text-gray-400 text-center mt-2">Up to 500 employees · Slack, burnout detection, advanced analytics</p>
+                </>
+              )}
+              {tier === "growth" && (
+                <>
+                  <div className="flex items-end gap-1 mb-4">
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">$149</span>
+                    <span className="text-gray-500 text-sm mb-1">/month</span>
+                  </div>
+                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-6">
+                    {["Up to 500 employees", "Slack & Teams integration", "Advanced analytics", "Burnout detection"].map((f) => (
+                      <div key={f} className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-violet-600" />{f}
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="w-full">Upgrade to Enterprise — $499/mo</Button>
+                  <p className="text-xs text-gray-400 text-center mt-2">Unlimited employees · SSO · HRIS integrations · API access</p>
+                </>
+              )}
+              {(tier === "enterprise" || isOwner) && (
+                <>
+                  <div className="flex items-end gap-1 mb-4">
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">{isOwner ? "Owner" : "$499"}</span>
+                    {!isOwner && <span className="text-gray-500 text-sm mb-1">/month</span>}
+                  </div>
+                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    {["Unlimited employees", "SSO / SAML", "HRIS integrations", "API access", "Audit logs", "Executive reports"].map((f) => (
+                      <div key={f} className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />{f}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -261,54 +343,52 @@ export default function SettingsPage() {
               {
                 name: "Slack",
                 desc: "Send survey links and weekly summaries directly to your Slack workspace.",
-                connected: false,
-                plan: "Growth",
+                feature: "slack_integration" as const,
                 icon: "💬",
               },
               {
                 name: "Microsoft Teams",
                 desc: "Distribute surveys via Microsoft Teams channels.",
-                connected: false,
-                plan: "Growth",
+                feature: "teams_integration" as const,
                 icon: "🟦",
               },
               {
                 name: "BambooHR",
                 desc: "Automatically sync employee roster from BambooHR.",
-                connected: false,
-                plan: "Enterprise",
+                feature: "hris_integrations" as const,
                 icon: "🎋",
               },
               {
                 name: "Workday",
                 desc: "Sync employee data and org structure from Workday.",
-                connected: false,
-                plan: "Enterprise",
+                feature: "hris_integrations" as const,
                 icon: "⚙️",
               },
-            ].map((integration) => (
-              <Card key={integration.name}>
-                <CardContent className="p-5 flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-white/8 flex items-center justify-center text-2xl flex-shrink-0">
-                    {integration.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="font-semibold text-gray-100 text-sm">{integration.name}</p>
-                      <Badge variant="outline" className="text-xs">{integration.plan}+</Badge>
+            ].map((integration) => {
+              const allowed = canAccess(integration.feature, tier, isOwner);
+              return (
+                <Card key={integration.name}>
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-white/8 flex items-center justify-center text-2xl flex-shrink-0">
+                      {integration.icon}
                     </div>
-                    <p className="text-xs text-gray-500">{integration.desc}</p>
-                  </div>
-                  <Button
-                    variant={integration.connected ? "outline" : "default"}
-                    size="sm"
-                    disabled={integration.plan === "Enterprise"}
-                  >
-                    {integration.connected ? "Disconnect" : integration.plan === "Enterprise" ? "Enterprise only" : "Connect"}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-semibold text-gray-100 text-sm">{integration.name}</p>
+                      </div>
+                      <p className="text-xs text-gray-500">{integration.desc}</p>
+                    </div>
+                    {allowed ? (
+                      <Button variant="default" size="sm">Connect</Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => window.location.href = "/settings?tab=billing"}>
+                        Upgrade
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>

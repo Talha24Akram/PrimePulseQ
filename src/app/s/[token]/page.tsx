@@ -1,54 +1,158 @@
 "use client";
-import { useState } from "react";
-import { MessageSquare, CheckCircle2, Lock, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { use } from "react";
+import { CheckCircle2, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
-const mockSurvey = {
-  id: "1",
-  title: "Weekly Pulse — May Week 2",
-  description: "Quick check-in on your energy, morale, and what's on your mind. 100% anonymous — we can't see who submitted.",
-  company_name: "Acme Inc.",
-  questions: [
-    { id: "q1", text: "On a scale of 1–10, how energized did you feel this week?", type: "scale", required: true, options: [] },
-    { id: "q2", text: "Do you feel supported by your manager?", type: "yes_no", required: true, options: [] },
-    { id: "q3", text: "How would you describe your current workload?", type: "multiple_choice", required: true, options: ["Too light", "About right", "A bit heavy", "Overwhelming"] },
-    { id: "q4", text: "What's one thing that would make your work better?", type: "text", required: false, options: [] },
-  ],
-};
+interface Question {
+  id: string;
+  text: string;
+  type: "scale" | "yes_no" | "multiple_choice" | "text";
+  required: boolean;
+  options: string[] | null;
+  order_index: number;
+}
+
+interface SurveyData {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  company_name: string;
+  questions: Question[];
+}
 
 type Answers = Record<string, string | number>;
 
-export default function SurveyResponsePage({ params }: { params: { token: string } }) {
+export default function SurveyResponsePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
+  const [survey, setSurvey] = useState<SurveyData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [closed, setClosed] = useState(false);
   const [answers, setAnswers] = useState<Answers>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
-  const questions = mockSurvey.questions;
-  const currentQuestion = questions[currentStep];
-  const isLast = currentStep === questions.length - 1;
-  const progress = ((currentStep + 1) / questions.length) * 100;
+  useEffect(() => {
+    async function loadSurvey() {
+      const supabase = createClient();
+
+      // The token in the URL is the survey ID (public link)
+      const { data: surveyData, error } = await supabase
+        .from("surveys")
+        .select("id, title, description, status, workspace_id")
+        .eq("id", token)
+        .single();
+
+      if (error || !surveyData) { setNotFound(true); setLoading(false); return; }
+      if (surveyData.status === "closed") { setClosed(true); setLoading(false); return; }
+
+      // Load questions
+      const { data: questions } = await supabase
+        .from("questions")
+        .select("*")
+        .eq("survey_id", surveyData.id)
+        .order("order_index");
+
+      // Load workspace company name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_name")
+        .eq("id", surveyData.workspace_id)
+        .single();
+
+      setSurvey({
+        id: surveyData.id,
+        title: surveyData.title,
+        description: surveyData.description,
+        status: surveyData.status,
+        company_name: profile?.company_name ?? "Your Company",
+        questions: (questions ?? []) as Question[],
+      });
+      setLoading(false);
+    }
+    loadSurvey();
+  }, [token]);
 
   function setAnswer(questionId: string, value: string | number) {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   }
 
   function canProceed() {
-    if (!currentQuestion.required) return true;
-    return answers[currentQuestion.id] !== undefined && answers[currentQuestion.id] !== "";
+    if (!survey) return false;
+    const q = survey.questions[currentStep];
+    if (!q.required) return true;
+    return answers[q.id] !== undefined && answers[q.id] !== "";
   }
 
   async function handleNext() {
+    if (!survey) return;
+    const isLast = currentStep === survey.questions.length - 1;
     if (isLast) {
       setSubmitting(true);
-      await new Promise((r) => setTimeout(r, 800));
+
+      const supabase = createClient();
+      await supabase.from("responses").insert({
+        survey_id: survey.id,
+        answers,
+      });
+
       setSubmitted(true);
     } else {
       setCurrentStep((s) => s + 1);
     }
   }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-gray-400 text-sm">Loading survey...</div>
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Survey not found</h1>
+          <p className="text-gray-500">This survey link is invalid or has expired.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (closed) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Survey closed</h1>
+          <p className="text-gray-500">This survey is no longer accepting responses.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!survey || survey.questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No questions yet</h1>
+          <p className="text-gray-500">This survey has no questions. Check back later.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const questions = survey.questions;
+  const currentQuestion = questions[currentStep];
+  const isLast = currentStep === questions.length - 1;
+  const progress = ((currentStep + 1) / questions.length) * 100;
 
   if (submitted) {
     return (
@@ -59,7 +163,9 @@ export default function SurveyResponsePage({ params }: { params: { token: string
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Thank you!</h1>
           <p className="text-gray-600 dark:text-gray-300 mb-2">Your response has been recorded anonymously.</p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Your feedback helps make {mockSurvey.company_name} a better place to work.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Your feedback helps make {survey.company_name} a better place to work.
+          </p>
           <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-400">
             <Lock className="h-3 w-3" />
             Your identity is never stored or linked to this response.
@@ -76,7 +182,7 @@ export default function SurveyResponsePage({ params }: { params: { token: string
         <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="PrimePulseQ" className="h-7 w-7 object-contain" />
-            <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{mockSurvey.company_name}</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{survey.company_name}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <Lock className="h-3 w-3" />
@@ -93,8 +199,10 @@ export default function SurveyResponsePage({ params }: { params: { token: string
         <div className="w-full max-w-xl">
           {currentStep === 0 && (
             <div className="text-center mb-10">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{mockSurvey.title}</h1>
-              <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">{mockSurvey.description}</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{survey.title}</h1>
+              {survey.description && (
+                <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">{survey.description}</p>
+              )}
             </div>
           )}
 
@@ -114,13 +222,13 @@ export default function SurveyResponsePage({ params }: { params: { token: string
             {/* Scale */}
             {currentQuestion.type === "scale" && (
               <div className="space-y-4">
-                <div className="grid grid-cols-10 gap-1.5">
+                <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
                   {[1,2,3,4,5,6,7,8,9,10].map((n) => (
                     <button
                       key={n}
                       onClick={() => setAnswer(currentQuestion.id, n)}
                       className={cn(
-                        "h-12 rounded-xl text-sm font-semibold transition-all border",
+                        "h-12 rounded-xl text-sm font-semibold transition-all border cursor-pointer",
                         answers[currentQuestion.id] === n
                           ? "bg-violet-600 text-white border-violet-500 scale-105 shadow-lg shadow-violet-900/50"
                           : "bg-gray-50 text-gray-600 border-gray-200 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-600 dark:bg-white/5 dark:text-gray-300 dark:border-white/10 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
@@ -145,7 +253,7 @@ export default function SurveyResponsePage({ params }: { params: { token: string
                     key={opt}
                     onClick={() => setAnswer(currentQuestion.id, opt)}
                     className={cn(
-                      "py-5 rounded-xl text-base font-semibold transition-all border",
+                      "py-5 rounded-xl text-base font-semibold transition-all border cursor-pointer",
                       answers[currentQuestion.id] === opt
                         ? "bg-violet-600 text-white border-violet-500 shadow-lg shadow-violet-900/50"
                         : "bg-gray-50 text-gray-700 border-gray-200 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-600 dark:bg-white/5 dark:text-gray-200 dark:border-white/10 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
@@ -160,12 +268,12 @@ export default function SurveyResponsePage({ params }: { params: { token: string
             {/* Multiple choice */}
             {currentQuestion.type === "multiple_choice" && (
               <div className="space-y-2">
-                {currentQuestion.options.map((opt) => (
+                {(currentQuestion.options ?? []).map((opt) => (
                   <button
                     key={opt}
                     onClick={() => setAnswer(currentQuestion.id, opt)}
                     className={cn(
-                      "w-full text-left px-5 py-4 rounded-xl text-sm font-medium transition-all border",
+                      "w-full text-left px-5 py-4 rounded-xl text-sm font-medium transition-all border cursor-pointer",
                       answers[currentQuestion.id] === opt
                         ? "bg-violet-600 text-white border-violet-500 shadow-lg shadow-violet-900/50"
                         : "bg-gray-50 text-gray-700 border-gray-200 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-600 dark:bg-white/5 dark:text-gray-200 dark:border-white/10 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
@@ -193,7 +301,7 @@ export default function SurveyResponsePage({ params }: { params: { token: string
             <button
               onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
               disabled={currentStep === 0}
-              className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-30 transition-colors"
+              className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-30 transition-colors cursor-pointer"
             >
               ← Back
             </button>

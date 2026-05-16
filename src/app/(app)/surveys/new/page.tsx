@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,13 +55,15 @@ function generateId() {
 }
 
 export default function NewSurveyPage() {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [frequency, setFrequency] = useState("weekly");
+  const [frequency, setFrequency] = useState("one-time");
   const [questions, setQuestions] = useState<QuestionDraft[]>([
     { id: generateId(), text: "", type: "scale", options: [], required: true },
   ]);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   function addQuestion() {
     setQuestions((prev) => [
@@ -108,10 +112,46 @@ export default function NewSurveyPage() {
   }
 
   async function handleSave(status: "draft" | "active") {
+    if (!title.trim()) { setSaveError("Survey title is required."); return; }
     setSaving(true);
-    // TODO: save to Supabase
-    await new Promise((r) => setTimeout(r, 800));
+    setSaveError("");
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaveError("Not authenticated."); setSaving(false); return; }
+
+    // Insert survey
+    const { data: survey, error: surveyError } = await supabase
+      .from("surveys")
+      .insert({
+        workspace_id: user.id,
+        title: title.trim(),
+        description: description.trim() || null,
+        status,
+        frequency,
+      })
+      .select()
+      .single();
+
+    if (surveyError) { setSaveError(surveyError.message); setSaving(false); return; }
+
+    // Insert questions
+    const validQuestions = questions.filter((q) => q.text.trim());
+    if (validQuestions.length > 0) {
+      const { error: qError } = await supabase.from("questions").insert(
+        validQuestions.map((q, i) => ({
+          survey_id: survey.id,
+          text: q.text.trim(),
+          type: q.type,
+          options: q.options.length > 0 ? q.options : null,
+          order_index: i,
+        }))
+      );
+      if (qError) { setSaveError(qError.message); setSaving(false); return; }
+    }
+
     setSaving(false);
+    router.push("/surveys");
   }
 
   return (
@@ -128,6 +168,13 @@ export default function NewSurveyPage() {
           <p className="text-sm text-gray-500 mt-0.5">Build your pulse survey</p>
         </div>
       </div>
+
+      {/* Error */}
+      {saveError && (
+        <div className="mb-6 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-sm text-red-600 dark:text-red-400">
+          {saveError}
+        </div>
+      )}
 
       {/* Templates */}
       <div className="mb-8">
@@ -174,7 +221,7 @@ export default function NewSurveyPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="one_time">One time</SelectItem>
+                  <SelectItem value="one-time">One time</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
                   <SelectItem value="biweekly">Bi-weekly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>

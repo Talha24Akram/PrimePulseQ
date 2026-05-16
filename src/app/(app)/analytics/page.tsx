@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { useProfile } from "@/hooks/useProfile";
+import { TierGate } from "@/components/tier-gate";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
@@ -58,6 +60,9 @@ const riskColors = {
 };
 
 export default function AnalyticsPage() {
+  const { profile } = useProfile();
+  const tier = profile?.subscription_tier ?? "free";
+  const isOwner = profile?.is_owner ?? false;
   const [period, setPeriod] = useState<"4w" | "8w" | "12w">("8w");
 
   const currentScore = engagementTrend[engagementTrend.length - 1].score;
@@ -86,10 +91,12 @@ export default function AnalyticsPage() {
               </button>
             ))}
           </div>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Download className="h-3.5 w-3.5" />
-            Export
-          </Button>
+          <TierGate feature="csv_export" tier={tier} isOwner={isOwner}>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => exportCSV()}>
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+          </TierGate>
         </div>
       </div>
 
@@ -290,6 +297,7 @@ export default function AnalyticsPage() {
 
         {/* Sentiment */}
         <TabsContent value="sentiment">
+          <TierGate feature="sentiment_analysis" tier={tier} isOwner={isOwner} overlay>
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Most Mentioned Topics</CardTitle>
@@ -319,10 +327,12 @@ export default function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
+          </TierGate>
         </TabsContent>
 
         {/* Burnout signals */}
         <TabsContent value="burnout">
+          <TierGate feature="burnout_detection" tier={tier} isOwner={isOwner} overlay>
           <div className="grid grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -375,8 +385,21 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
           </div>
+          </TierGate>
         </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+function exportCSV() {
+  // Client-side CSV export stub — data would come from Supabase in a real scenario
+  const header = "survey_id,submitted_at,answers\n";
+  const blob = new Blob([header], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "responses.csv";
+  a.click();
+  URL.revokeObjectURL(url);
 }

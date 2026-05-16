@@ -1,99 +1,143 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Search, MoreHorizontal, Copy, Trash2, Eye, Send } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Eye, Send, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatDate } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
+import { canAccess, getTemplateLimit, TIER_LABELS } from "@/lib/tiers";
 
-const mockSurveys = [
-  {
-    id: "1",
-    title: "Weekly Pulse — May Week 2",
-    description: "Quick weekly check-in on energy, morale, and blockers.",
-    status: "active",
-    frequency: "weekly",
-    response_count: 16,
-    sent_count: 24,
-    created_at: "2025-05-12",
-    closes_at: "2025-05-19",
-    token: "abc123",
-  },
-  {
-    id: "2",
-    title: "Remote Work Satisfaction",
-    description: "Understanding how the team feels about remote work setup.",
-    status: "closed",
-    frequency: "one_time",
-    response_count: 21,
-    sent_count: 24,
-    created_at: "2025-05-05",
-    closes_at: "2025-05-12",
-    token: "def456",
-  },
-  {
-    id: "3",
-    title: "Q2 Engagement Check-in",
-    description: "Quarterly deep-dive on engagement and culture.",
-    status: "draft",
-    frequency: "one_time",
-    response_count: 0,
-    sent_count: 0,
-    created_at: "2025-05-14",
-    closes_at: null,
-    token: "ghi789",
-  },
-  {
-    id: "4",
-    title: "Manager Effectiveness Survey",
-    description: "Anonymous feedback on management quality.",
-    status: "active",
-    frequency: "monthly",
-    response_count: 8,
-    sent_count: 24,
-    created_at: "2025-05-01",
-    closes_at: "2025-05-31",
-    token: "jkl012",
-  },
-];
+interface Survey {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "draft" | "active" | "closed";
+  frequency: string;
+  closes_at: string | null;
+  created_at: string;
+  response_count?: number;
+}
 
-const statusColors = {
+const statusVariant = {
   active: "default",
   closed: "secondary",
   draft: "outline",
 } as const;
 
 export default function SurveysPage() {
+  const { profile } = useProfile();
+  const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "draft" | "closed">("all");
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const filtered = mockSurveys.filter((s) => {
+  const tier = profile?.subscription_tier ?? "free";
+  const isOwner = profile?.is_owner ?? false;
+  const templateLimit = getTemplateLimit(tier, isOwner);
+  const canWeekly = canAccess("weekly_surveys", tier, isOwner);
+
+  const loadSurveys = useCallback(async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("surveys")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setSurveys(data as Survey[]);
+
+      // Load response counts for each survey
+      const counts: Record<string, number> = {};
+      await Promise.all(
+        data.map(async (survey) => {
+          const { count } = await supabase
+            .from("responses")
+            .select("*", { count: "exact", head: true })
+            .eq("survey_id", survey.id);
+          counts[survey.id] = count ?? 0;
+        })
+      );
+      setResponseCounts(counts);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { loadSurveys(); }, [loadSurveys]);
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this survey? This cannot be undone.")) return;
+    const supabase = createClient();
+    await supabase.from("surveys").delete().eq("id", id);
+    setSurveys((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  async function handleActivate(survey: Survey) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("surveys")
+      .update({ status: "active" })
+      .eq("id", survey.id);
+    if (!error) {
+      setSurveys((prev) => prev.map((s) => s.id === survey.id ? { ...s, status: "active" } : s));
+    }
+  }
+
+  function copyLink(surveyId: string) {
+    const url = `${window.location.origin}/s/${surveyId}`;
+    navigator.clipboard.writeText(url);
+    setCopied(surveyId);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  const filtered = surveys.filter((s) => {
     const matchSearch = s.title.toLowerCase().includes(search.toLowerCase());
     const matchFilter = filter === "all" || s.status === filter;
     return matchSearch && matchFilter;
   });
 
+  const draftCount = surveys.filter((s) => s.status === "draft").length;
+  const atTemplateLimit = !isOwner && templateLimit !== Infinity && draftCount >= templateLimit;
+
+  if (loading) {
+    return <div className="p-8 flex items-center justify-center"><div className="text-gray-400 text-sm">Loading surveys...</div></div>;
+  }
+
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 sm:mb-8 gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Surveys</h1>
-          <p className="text-gray-500 text-sm mt-1">{mockSurveys.length} surveys total</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {surveys.length} surveys
+            {!isOwner && templateLimit !== Infinity && <span className="ml-1">(template limit: {templateLimit} on {TIER_LABELS[tier]})</span>}
+          </p>
         </div>
         <Link href="/surveys/new">
-          <Button className="gap-2">
+          <Button className="gap-2" disabled={atTemplateLimit} title={atTemplateLimit ? "Upgrade to create more surveys" : undefined}>
             <Plus className="h-4 w-4" />
             New survey
           </Button>
         </Link>
       </div>
 
+      {/* Weekly surveys tier note */}
+      {!canWeekly && (
+        <div className="mb-6 p-4 rounded-xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 text-violet-700 dark:text-violet-300 text-sm">
+          Weekly & recurring surveys are available on Starter and above.{" "}
+          <a href="/settings?tab=billing" className="underline font-medium">Upgrade to unlock.</a>
+        </div>
+      )}
+
       {/* Filters */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -108,7 +152,7 @@ export default function SurveysPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize cursor-pointer ${
                 filter === f
                   ? "bg-violet-100 text-violet-700 border border-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30"
                   : "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
@@ -122,91 +166,107 @@ export default function SurveysPage() {
 
       {/* Survey list */}
       <div className="space-y-3">
-        {filtered.map((survey) => (
-          <Card key={survey.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <Link
-                      href={`/surveys/${survey.id}`}
-                      className="font-semibold text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 truncate"
-                    >
-                      {survey.title}
-                    </Link>
-                    <Badge variant={statusColors[survey.status as keyof typeof statusColors]}>
-                      {survey.status}
-                    </Badge>
-                    <Badge variant="outline" className="capitalize text-xs">
-                      {survey.frequency.replace("_", " ")}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-500 truncate">{survey.description}</p>
-                  <div className="flex items-center gap-6 mt-3">
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1">Response rate</p>
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={survey.sent_count > 0 ? (survey.response_count / survey.sent_count) * 100 : 0}
-                          className="w-24"
-                        />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                          {survey.sent_count > 0
-                            ? Math.round((survey.response_count / survey.sent_count) * 100)
-                            : 0}%
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Responses</p>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{survey.response_count} / {survey.sent_count}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Created</p>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{formatDate(survey.created_at)}</p>
-                    </div>
-                    {survey.closes_at && (
-                      <div>
-                        <p className="text-xs text-gray-400">Closes</p>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{formatDate(survey.closes_at)}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Link href={`/surveys/${survey.id}`}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-gray-400 hover:text-gray-700"
-                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/s/${survey.token}`)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  {survey.status === "draft" && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-violet-600">
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {filtered.length === 0 && (
+        {filtered.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
-            <p className="text-lg font-medium mb-1">No surveys found</p>
-            <p className="text-sm">Try adjusting your search or filters.</p>
+            {surveys.length === 0 ? (
+              <>
+                <p className="text-lg font-medium mb-1">No surveys yet</p>
+                <p className="text-sm mb-4">Create your first survey to start collecting employee feedback.</p>
+                <Link href="/surveys/new"><Button>Create your first survey</Button></Link>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-medium mb-1">No surveys match</p>
+                <p className="text-sm">Try adjusting your search or filter.</p>
+              </>
+            )}
           </div>
+        ) : (
+          filtered.map((survey) => {
+            const responseCount = responseCounts[survey.id] ?? 0;
+            return (
+              <Card key={survey.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+                        <Link
+                          href={`/surveys/${survey.id}`}
+                          className="font-semibold text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 truncate"
+                        >
+                          {survey.title}
+                        </Link>
+                        <Badge variant={statusVariant[survey.status]}>
+                          {survey.status}
+                        </Badge>
+                        <Badge variant="outline" className="capitalize text-xs hidden sm:inline-flex">
+                          {survey.frequency.replace(/-/g, " ")}
+                        </Badge>
+                      </div>
+                      {survey.description && (
+                        <p className="text-sm text-gray-500 truncate">{survey.description}</p>
+                      )}
+                      <div className="flex items-center gap-4 sm:gap-6 mt-3 flex-wrap">
+                        <div>
+                          <p className="text-xs text-gray-400 mb-1">Responses</p>
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{responseCount}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">Created</p>
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{formatDate(survey.created_at)}</p>
+                        </div>
+                        {survey.closes_at && (
+                          <div>
+                            <p className="text-xs text-gray-400">Closes</p>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{formatDate(survey.closes_at)}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Link href={`/surveys/${survey.id}`}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      {survey.status !== "draft" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-gray-700"
+                          onClick={() => copyLink(survey.id)}
+                          title="Copy survey link"
+                        >
+                          {copied === survey.id ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      )}
+                      {survey.status === "draft" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-violet-600"
+                          onClick={() => handleActivate(survey)}
+                          title="Activate survey"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-400 hover:text-red-500"
+                        onClick={() => handleDelete(survey.id)}
+                        title="Delete survey"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </div>
