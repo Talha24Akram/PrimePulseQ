@@ -206,7 +206,7 @@ export default function LandingPage() {
               { name: "Growth", price: "$149", period: "/mo", employees: "Up to 500 employees", highlight: true, cta: "Start free trial", trial: true },
               { name: "Enterprise", price: "$499", period: "/mo", employees: "Unlimited employees", highlight: false, cta: "Get started" },
             ].map((tier) => (
-              <div key={tier.name} className={`p-5 sm:p-6 rounded-xl border ${tier.highlight ? "border-violet-500 bg-violet-600 shadow-xl shadow-violet-500/30 dark:shadow-violet-900/40" : "border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900"}`}>
+              <div key={tier.name} className={`p-5 sm:p-6 rounded-xl border ${tier.highlight ? "border-violet-500 bg-violet-600 shadow-[0_0_40px_rgba(124,58,237,0.5)] sm:shadow-[0_0_60px_rgba(124,58,237,0.5)]" : "border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900"}`}>
                 <p className={`text-sm font-medium mb-1 ${tier.highlight ? "text-violet-200" : "text-gray-500 dark:text-gray-400"}`}>{tier.name}</p>
                 <div className="flex items-end gap-1 mb-1">
                   <span className={`text-3xl sm:text-4xl font-bold ${tier.highlight ? "text-white" : "text-gray-900 dark:text-white"}`}>{tier.price}</span>
