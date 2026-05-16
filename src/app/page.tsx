@@ -216,7 +216,7 @@ export default function LandingPage() {
                 {"trial" in tier && <p className="text-xs font-semibold text-emerald-400 mb-4">✦ 1 week free trial</p>}
                 {!("trial" in tier) && <div className="mb-5" />}
                 <Link href="/signup">
-                  <Button className={`w-full ${tier.highlight ? "bg-white text-violet-700 hover:bg-violet-50" : ""}`} variant={tier.highlight ? "outline" : "default"}>
+                  <Button className={`w-full ${tier.highlight ? "bg-violet-900 text-white hover:bg-violet-950 border-violet-800" : ""}`} variant={tier.highlight ? "outline" : "default"}>
                     {tier.cta}
                   </Button>
                 </Link>
