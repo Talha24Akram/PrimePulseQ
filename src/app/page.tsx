@@ -11,9 +11,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 border-b border-gray-200 dark:border-white/8 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-6 flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
-              <MessageSquare className="h-4 w-4 text-white" />
-            </div>
+            <img src="/logo.png" alt="PrimePulseQ" className="h-8 w-8 object-contain" />
             <span className="font-bold text-gray-900 dark:text-white text-lg">PrimePulseQ</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
@@ -294,9 +292,7 @@ export default function LandingPage() {
       <footer className="border-t border-gray-200 dark:border-white/8 py-12 px-6 bg-gray-50 dark:bg-gray-950">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded bg-violet-600 flex items-center justify-center">
-              <MessageSquare className="h-3 w-3 text-white" />
-            </div>
+            <img src="/logo.png" alt="PrimePulseQ" className="h-6 w-6 object-contain" />
             <span className="font-bold text-gray-900 dark:text-white">PrimePulseQ</span>
           </div>
           <div className="flex gap-8">

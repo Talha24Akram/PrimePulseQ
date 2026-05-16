@@ -35,9 +35,7 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-64 flex-col border-r bg-white border-gray-200 dark:bg-gray-900 dark:border-white/5">
       <div className="flex h-16 items-center gap-2.5 px-6 border-b border-gray-200 dark:border-white/5">
-        <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-900/50">
-          <MessageSquare className="h-4 w-4 text-white" />
-        </div>
+        <img src="/logo.png" alt="PrimePulseQ" className="h-8 w-8 object-contain" />
         <span className="font-bold text-gray-900 dark:text-white tracking-tight">PrimePulseQ</span>
       </div>
 

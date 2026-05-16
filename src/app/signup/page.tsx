@@ -73,9 +73,7 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="h-9 w-9 rounded-xl bg-violet-600 flex items-center justify-center">
-              <MessageSquare className="h-5 w-5 text-white" />
-            </div>
+            <img src="/logo.png" alt="PrimePulseQ" className="h-9 w-9 object-contain" />
             <span className="font-bold text-gray-900 dark:text-white text-xl">PrimePulseQ</span>
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create your workspace</h1>

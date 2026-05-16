@@ -5,6 +5,10 @@ import { Providers } from "@/components/providers";
 export const metadata: Metadata = {
   title: "PrimePulseQ — Employee Feedback Without Enterprise Complexity",
   description: "Weekly pulse surveys that give employees a safe, anonymous voice. Know what your team actually thinks in 60 seconds.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

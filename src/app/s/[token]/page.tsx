@@ -75,9 +75,7 @@ export default function SurveyResponsePage({ params }: { params: { token: string
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/8">
         <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-violet-600 flex items-center justify-center">
-              <MessageSquare className="h-3.5 w-3.5 text-white" />
-            </div>
+            <img src="/logo.png" alt="PrimePulseQ" className="h-7 w-7 object-contain" />
             <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{mockSurvey.company_name}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
