@@ -53,7 +53,7 @@ export default function EmployeesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Employees</h1>
           <p className="text-gray-500 text-sm mt-1">{activeCount} active · {mockEmployees.length} total</p>
         </div>
         <div className="flex gap-2">
@@ -72,33 +72,33 @@ export default function EmployeesPage() {
       <div className="grid grid-cols-3 gap-4 mb-8">
         <Card>
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-violet-100 flex items-center justify-center">
-              <UserCheck className="h-5 w-5 text-violet-600" />
+            <div className="h-10 w-10 rounded-xl bg-violet-100 dark:bg-violet-500/15 flex items-center justify-center">
+              <UserCheck className="h-5 w-5 text-violet-600 dark:text-violet-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{activeCount}</p>
               <p className="text-sm text-gray-500">Active employees</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center">
-              <Mail className="h-5 w-5 text-amber-600" />
+            <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
+              <Mail className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{neverResponded}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{neverResponded}</p>
               <p className="text-sm text-gray-500">Never responded</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <UserCheck className="h-5 w-5 text-emerald-600" />
+            <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center">
+              <UserCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">68%</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">68%</p>
               <p className="text-sm text-gray-500">Average response rate</p>
             </div>
           </CardContent>
@@ -122,7 +122,7 @@ export default function EmployeesPage() {
               key={d}
               onClick={() => setDept(d)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                dept === d ? "bg-violet-100 text-violet-700" : "text-gray-500 hover:bg-gray-100"
+                dept === d ? "bg-violet-100 text-violet-700 border border-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
               }`}
             >
               {d}
@@ -136,12 +136,12 @@ export default function EmployeesPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Employee</th>
-                <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Department</th>
-                <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Status</th>
-                <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Last responded</th>
-                <th className="text-right text-xs text-gray-400 font-medium px-6 py-3">Actions</th>
+              <tr className="border-b border-gray-100 dark:border-white/8">
+                <th className="text-left text-xs text-gray-400 dark:text-gray-400 font-medium px-6 py-3">Employee</th>
+                <th className="text-left text-xs text-gray-400 dark:text-gray-400 font-medium px-6 py-3">Department</th>
+                <th className="text-left text-xs text-gray-400 dark:text-gray-400 font-medium px-6 py-3">Status</th>
+                <th className="text-left text-xs text-gray-400 dark:text-gray-400 font-medium px-6 py-3">Last responded</th>
+                <th className="text-right text-xs text-gray-400 dark:text-gray-400 font-medium px-6 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -149,14 +149,14 @@ export default function EmployeesPage() {
                 const daysSince = getDaysSince(employee.last_responded);
                 const isLate = daysSince !== null && daysSince > 14;
                 return (
-                  <tr key={employee.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                  <tr key={employee.id} className="border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/3">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="text-xs">{getInitials(employee.name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium text-sm text-gray-900">{employee.name}</p>
+                          <p className="font-medium text-sm text-gray-100">{employee.name}</p>
                           <p className="text-xs text-gray-500">{employee.email}</p>
                         </div>
                       </div>

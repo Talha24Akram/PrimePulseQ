@@ -71,12 +71,12 @@ export default function SurveyDetailPage({ params }: { params: { id: string } })
           </Link>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-gray-900">{survey.title}</h1>
+              <h1 className="text-2xl font-bold text-white">{survey.title}</h1>
               <Badge variant={survey.status === "active" ? "default" : "secondary"}>
                 {survey.status}
               </Badge>
             </div>
-            <p className="text-gray-500 text-sm">{survey.description}</p>
+            <p className="text-gray-400 text-sm">{survey.description}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -102,10 +102,10 @@ export default function SurveyDetailPage({ params }: { params: { id: string } })
           <Card key={stat.label}>
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-gray-500">{stat.label}</p>
+                <p className="text-xs text-gray-400">{stat.label}</p>
                 <stat.icon className={`h-4 w-4 ${stat.color}`} />
               </div>
-              <p className="text-xl font-bold text-gray-900">{stat.value}</p>
+              <p className="text-xl font-bold text-white">{stat.value}</p>
               {stat.label === "Response rate" && (
                 <Progress value={responseRate} className="mt-2" />
               )}
@@ -115,11 +115,11 @@ export default function SurveyDetailPage({ params }: { params: { id: string } })
       </div>
 
       {/* Share link */}
-      <Card className="mb-8 border-violet-100 bg-violet-50/50">
+      <Card className="mb-8 border-violet-300 bg-violet-50 dark:border-violet-500/20 dark:bg-violet-500/5">
         <CardContent className="p-5 flex items-center gap-4">
           <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900 mb-1">Anonymous survey link</p>
-            <p className="text-sm text-gray-500 font-mono bg-white border border-gray-200 rounded-lg px-3 py-2 truncate">
+            <p className="text-sm font-medium text-gray-100 mb-1">Anonymous survey link</p>
+            <p className="text-sm text-gray-500 font-mono bg-gray-50 border border-gray-200 dark:bg-white/5 dark:border-white/10 rounded-lg px-3 py-2 truncate">
               {surveyUrl}
             </p>
           </div>
@@ -140,7 +140,7 @@ export default function SurveyDetailPage({ params }: { params: { id: string } })
           {survey.questions.map((q) => (
             <Card key={q.id}>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold text-gray-900">{q.text}</CardTitle>
+                <CardTitle className="text-sm font-semibold text-white">{q.text}</CardTitle>
                 <Badge variant="outline" className="w-fit text-xs capitalize">{q.type.replace("_", " ")}</Badge>
               </CardHeader>
               <CardContent>
@@ -177,7 +177,7 @@ export default function SurveyDetailPage({ params }: { params: { id: string } })
                       return (
                         <div key={label}>
                           <div className="flex justify-between text-sm mb-1">
-                            <span className="font-medium text-gray-700">{label}</span>
+                            <span className="font-medium text-gray-200">{label}</span>
                             <span className="text-gray-500">{pct}% ({count})</span>
                           </div>
                           <Progress value={pct} className={label === "Yes" ? "" : "[&>div]:bg-gray-400"} />
@@ -190,7 +190,7 @@ export default function SurveyDetailPage({ params }: { params: { id: string } })
                 {q.type === "text" && Array.isArray(q.responses) && (
                   <div className="space-y-2">
                     {(q.responses as string[]).map((response, i) => (
-                      <div key={i} className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-700">
+                      <div key={i} className="p-3 rounded-lg bg-gray-50 border border-gray-200 dark:bg-white/5 dark:border-white/10 text-sm text-gray-700 dark:text-gray-200">
                         &ldquo;{response}&rdquo;
                       </div>
                     ))}
@@ -205,11 +205,11 @@ export default function SurveyDetailPage({ params }: { params: { id: string } })
           {survey.questions.map((q, i) => (
             <Card key={q.id}>
               <CardContent className="p-5 flex items-start gap-3">
-                <span className="h-6 w-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="h-6 w-6 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                   {i + 1}
                 </span>
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">{q.text}</p>
+                  <p className="font-medium text-white text-sm">{q.text}</p>
                   <Badge variant="outline" className="mt-1 text-xs capitalize">{q.type.replace("_", " ")}</Badge>
                 </div>
               </CardContent>

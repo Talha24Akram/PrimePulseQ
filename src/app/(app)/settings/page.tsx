@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2 } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
   const [company, setCompany] = useState({ name: "Acme Inc.", slug: "acme", website: "https://acme.com" });
   const [notifications, setNotifications] = useState({
     new_responses: true,
@@ -32,7 +34,7 @@ export default function SettingsPage() {
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
         <p className="text-gray-500 text-sm mt-1">Manage your workspace preferences</p>
       </div>
 
@@ -43,6 +45,9 @@ export default function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-3.5 w-3.5" /> Notifications
+          </TabsTrigger>
+          <TabsTrigger value="preferences" className="gap-2">
+            <Sun className="h-3.5 w-3.5" /> Preferences
           </TabsTrigger>
           <TabsTrigger value="billing" className="gap-2">
             <CreditCard className="h-3.5 w-3.5" /> Billing
@@ -70,7 +75,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Workspace URL</Label>
                 <div className="flex items-center">
-                  <span className="flex h-10 items-center px-3 text-sm text-gray-500 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg">
+                  <span className="flex h-10 items-center px-3 text-sm text-gray-500 bg-gray-50 border border-r-0 border-gray-300 rounded-l-lg dark:text-gray-400 dark:bg-white/5 dark:border-white/10">
                     pulsesurvey.io/
                   </span>
                   <Input
@@ -93,7 +98,7 @@ export default function SettingsPage() {
                   {saving ? "Saving..." : "Save changes"}
                 </Button>
                 {saved && (
-                  <span className="flex items-center gap-1.5 text-sm text-emerald-600">
+                  <span className="flex items-center gap-1.5 text-sm text-emerald-400">
                     <CheckCircle2 className="h-4 w-4" /> Saved
                   </span>
                 )}
@@ -101,16 +106,16 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="mt-6 border-red-100">
+          <Card className="mt-6 border-red-500/20">
             <CardHeader>
-              <CardTitle className="text-base text-red-600">Danger Zone</CardTitle>
+              <CardTitle className="text-base text-red-400">Danger Zone</CardTitle>
               <CardDescription>These actions are irreversible.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between p-4 rounded-lg border border-red-100 bg-red-50">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20 bg-red-500/5">
                 <div>
-                  <p className="font-medium text-red-900 text-sm">Delete workspace</p>
-                  <p className="text-xs text-red-600 mt-0.5">Permanently deletes all surveys, responses, and employee data.</p>
+                  <p className="font-medium text-red-300 text-sm">Delete workspace</p>
+                  <p className="text-xs text-red-400/70 mt-0.5">Permanently deletes all surveys, responses, and employee data.</p>
                 </div>
                 <Button variant="destructive" size="sm">Delete</Button>
               </div>
@@ -136,7 +141,7 @@ export default function SettingsPage() {
                   {i > 0 && <Separator className="my-4" />}
                   <div className="flex items-center justify-between py-2">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                      <p className="text-sm font-medium text-gray-100">{item.label}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
                     </div>
                     <Switch
@@ -146,6 +151,53 @@ export default function SettingsPage() {
                   </div>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Preferences */}
+        <TabsContent value="preferences">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Appearance</CardTitle>
+              <CardDescription>Choose how PrimePulseQ looks for you.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setTheme("light")}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                    theme === "light"
+                      ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10"
+                      : "border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${theme === "light" ? "bg-violet-100 dark:bg-violet-500/20" : "bg-gray-100 dark:bg-white/8"}`}>
+                    <Sun className={`h-5 w-5 ${theme === "light" ? "text-violet-600 dark:text-violet-400" : "text-gray-500 dark:text-gray-400"}`} />
+                  </div>
+                  <div>
+                    <p className={`font-medium text-sm ${theme === "light" ? "text-violet-700 dark:text-violet-300" : "text-gray-700 dark:text-gray-200"}`}>Light</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Clean and bright</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setTheme("dark")}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                    theme === "dark"
+                      ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10"
+                      : "border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${theme === "dark" ? "bg-violet-100 dark:bg-violet-500/20" : "bg-gray-100 dark:bg-white/8"}`}>
+                    <Moon className={`h-5 w-5 ${theme === "dark" ? "text-violet-600 dark:text-violet-400" : "text-gray-500 dark:text-gray-400"}`} />
+                  </div>
+                  <div>
+                    <p className={`font-medium text-sm ${theme === "dark" ? "text-violet-700 dark:text-violet-300" : "text-gray-700 dark:text-gray-200"}`}>Dark</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Easy on the eyes</p>
+                  </div>
+                </button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -161,11 +213,11 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-end gap-1 mb-4">
-                <span className="text-4xl font-bold text-gray-900">$19</span>
+                <span className="text-4xl font-bold text-gray-900 dark:text-white">$49</span>
                 <span className="text-gray-500 text-sm mb-1">/month</span>
               </div>
-              <div className="space-y-2 text-sm text-gray-600 mb-6">
-                {["Up to 10 employees", "Weekly pulse surveys", "Basic analytics", "Email support"].map((f) => (
+              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-6">
+                {["Up to 100 employees", "Weekly pulse surveys", "Basic analytics", "Email support"].map((f) => (
                   <div key={f} className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-violet-600" />
                     {f}
@@ -173,7 +225,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <Button className="w-full">Upgrade to Growth — $149/mo</Button>
-              <p className="text-xs text-gray-400 text-center mt-2">Unlock Slack integration, advanced analytics, and more</p>
+              <p className="text-xs text-gray-400 text-center mt-2">Up to 500 employees · Slack, burnout detection, advanced analytics · 1 week free</p>
             </CardContent>
           </Card>
 
@@ -182,13 +234,13 @@ export default function SettingsPage() {
               <CardTitle className="text-base">Billing Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg border border-gray-100 bg-gray-50">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-12 rounded bg-gray-800 flex items-center justify-center">
+                  <div className="h-8 w-12 rounded bg-gray-700 flex items-center justify-center">
                     <span className="text-white text-xs font-bold">VISA</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">•••• •••• •••• 4242</p>
+                    <p className="text-sm font-medium text-gray-100">•••• •••• •••• 4242</p>
                     <p className="text-xs text-gray-500">Expires 12/27</p>
                   </div>
                 </div>
@@ -196,7 +248,7 @@ export default function SettingsPage() {
               </div>
               <p className="text-xs text-gray-400 flex items-center gap-1.5">
                 <Shield className="h-3 w-3" />
-                Payments are secured by Stripe. We never store card details.
+                Payments are secured by Paddle. We never store card details.
               </p>
             </CardContent>
           </Card>
@@ -237,12 +289,12 @@ export default function SettingsPage() {
             ].map((integration) => (
               <Card key={integration.name}>
                 <CardContent className="p-5 flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center text-2xl flex-shrink-0">
+                  <div className="h-12 w-12 rounded-xl bg-white/8 flex items-center justify-center text-2xl flex-shrink-0">
                     {integration.icon}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <p className="font-semibold text-gray-900 text-sm">{integration.name}</p>
+                      <p className="font-semibold text-gray-100 text-sm">{integration.name}</p>
                       <Badge variant="outline" className="text-xs">{integration.plan}+</Badge>
                     </div>
                     <p className="text-xs text-gray-500">{integration.desc}</p>

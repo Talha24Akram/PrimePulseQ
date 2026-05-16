@@ -5,41 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-// Mock survey data — replace with Supabase fetch by token
 const mockSurvey = {
   id: "1",
   title: "Weekly Pulse — May Week 2",
   description: "Quick check-in on your energy, morale, and what's on your mind. 100% anonymous — we can't see who submitted.",
   company_name: "Acme Inc.",
   questions: [
-    {
-      id: "q1",
-      text: "On a scale of 1–10, how energized did you feel this week?",
-      type: "scale",
-      required: true,
-      options: [],
-    },
-    {
-      id: "q2",
-      text: "Do you feel supported by your manager?",
-      type: "yes_no",
-      required: true,
-      options: [],
-    },
-    {
-      id: "q3",
-      text: "How would you describe your current workload?",
-      type: "multiple_choice",
-      required: true,
-      options: ["Too light", "About right", "A bit heavy", "Overwhelming"],
-    },
-    {
-      id: "q4",
-      text: "What's one thing that would make your work better?",
-      type: "text",
-      required: false,
-      options: [],
-    },
+    { id: "q1", text: "On a scale of 1–10, how energized did you feel this week?", type: "scale", required: true, options: [] },
+    { id: "q2", text: "Do you feel supported by your manager?", type: "yes_no", required: true, options: [] },
+    { id: "q3", text: "How would you describe your current workload?", type: "multiple_choice", required: true, options: ["Too light", "About right", "A bit heavy", "Overwhelming"] },
+    { id: "q4", text: "What's one thing that would make your work better?", type: "text", required: false, options: [] },
   ],
 };
 
@@ -68,7 +43,6 @@ export default function SurveyResponsePage({ params }: { params: { token: string
   async function handleNext() {
     if (isLast) {
       setSubmitting(true);
-      // TODO: submit to Supabase
       await new Promise((r) => setTimeout(r, 800));
       setSubmitted(true);
     } else {
@@ -78,14 +52,14 @@ export default function SurveyResponsePage({ params }: { params: { token: string
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center">
-          <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+          <div className="h-20 w-20 rounded-full bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">Thank you!</h1>
-          <p className="text-gray-500 mb-2">Your response has been recorded anonymously.</p>
-          <p className="text-gray-500 text-sm">Your feedback helps make {mockSurvey.company_name} a better place to work.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Thank you!</h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-2">Your response has been recorded anonymously.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Your feedback helps make {mockSurvey.company_name} a better place to work.</p>
           <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-400">
             <Lock className="h-3 w-3" />
             Your identity is never stored or linked to this response.
@@ -96,53 +70,48 @@ export default function SurveyResponsePage({ params }: { params: { token: string
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       {/* Top bar */}
-      <div className="bg-white border-b border-gray-100">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/8">
         <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-violet-600 flex items-center justify-center">
               <MessageSquare className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="font-semibold text-gray-900 text-sm">{mockSurvey.company_name}</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{mockSurvey.company_name}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <Lock className="h-3 w-3" />
             100% anonymous
           </div>
         </div>
-        {/* Progress bar */}
-        <div className="h-1 bg-gray-100">
-          <div
-            className="h-1 bg-violet-600 transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
+        <div className="h-0.5 bg-gray-100 dark:bg-white/5">
+          <div className="h-0.5 bg-violet-500 transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-xl">
-          {/* Survey intro on first question */}
           {currentStep === 0 && (
             <div className="text-center mb-10">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">{mockSurvey.title}</h1>
-              <p className="text-gray-500 text-sm max-w-md mx-auto">{mockSurvey.description}</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{mockSurvey.title}</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">{mockSurvey.description}</p>
             </div>
           )}
 
-          {/* Question */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+          {/* Question card */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/8 shadow-md dark:shadow-2xl dark:shadow-black/30 p-8">
             <div className="flex items-center gap-2 mb-6">
-              <span className="text-xs text-gray-400 font-medium">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                 Question {currentStep + 1} of {questions.length}
               </span>
               {!currentQuestion.required && (
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Optional</span>
+                <span className="text-xs text-gray-400 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-2 py-0.5 rounded-full">Optional</span>
               )}
             </div>
 
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">{currentQuestion.text}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 leading-snug">{currentQuestion.text}</h2>
 
             {/* Scale */}
             {currentQuestion.type === "scale" && (
@@ -153,10 +122,10 @@ export default function SurveyResponsePage({ params }: { params: { token: string
                       key={n}
                       onClick={() => setAnswer(currentQuestion.id, n)}
                       className={cn(
-                        "h-12 rounded-xl text-sm font-semibold transition-all border-2",
+                        "h-12 rounded-xl text-sm font-semibold transition-all border",
                         answers[currentQuestion.id] === n
-                          ? "bg-violet-600 text-white border-violet-600 scale-105 shadow-md"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:bg-violet-50"
+                          ? "bg-violet-600 text-white border-violet-500 scale-105 shadow-lg shadow-violet-900/50"
+                          : "bg-gray-50 text-gray-600 border-gray-200 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-600 dark:bg-white/5 dark:text-gray-300 dark:border-white/10 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
                       )}
                     >
                       {n}
@@ -178,10 +147,10 @@ export default function SurveyResponsePage({ params }: { params: { token: string
                     key={opt}
                     onClick={() => setAnswer(currentQuestion.id, opt)}
                     className={cn(
-                      "py-5 rounded-xl text-base font-semibold transition-all border-2",
+                      "py-5 rounded-xl text-base font-semibold transition-all border",
                       answers[currentQuestion.id] === opt
-                        ? "bg-violet-600 text-white border-violet-600 shadow-md"
-                        : "bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:bg-violet-50"
+                        ? "bg-violet-600 text-white border-violet-500 shadow-lg shadow-violet-900/50"
+                        : "bg-gray-50 text-gray-700 border-gray-200 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-600 dark:bg-white/5 dark:text-gray-200 dark:border-white/10 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
                     )}
                   >
                     {opt}
@@ -198,10 +167,10 @@ export default function SurveyResponsePage({ params }: { params: { token: string
                     key={opt}
                     onClick={() => setAnswer(currentQuestion.id, opt)}
                     className={cn(
-                      "w-full text-left px-5 py-4 rounded-xl text-sm font-medium transition-all border-2",
+                      "w-full text-left px-5 py-4 rounded-xl text-sm font-medium transition-all border",
                       answers[currentQuestion.id] === opt
-                        ? "bg-violet-600 text-white border-violet-600 shadow-md"
-                        : "bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:bg-violet-50"
+                        ? "bg-violet-600 text-white border-violet-500 shadow-lg shadow-violet-900/50"
+                        : "bg-gray-50 text-gray-700 border-gray-200 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-600 dark:bg-white/5 dark:text-gray-200 dark:border-white/10 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
                     )}
                   >
                     {opt}
@@ -217,7 +186,6 @@ export default function SurveyResponsePage({ params }: { params: { token: string
                 rows={4}
                 value={(answers[currentQuestion.id] as string) || ""}
                 onChange={(e) => setAnswer(currentQuestion.id, e.target.value)}
-                className="resize-none"
               />
             )}
           </div>
@@ -227,7 +195,7 @@ export default function SurveyResponsePage({ params }: { params: { token: string
             <button
               onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
               disabled={currentStep === 0}
-              className="text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 transition-colors"
+              className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-30 transition-colors"
             >
               ← Back
             </button>

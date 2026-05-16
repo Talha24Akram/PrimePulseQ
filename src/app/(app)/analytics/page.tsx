@@ -69,8 +69,8 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-500 text-sm mt-1">Team engagement intelligence</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+          <p className="text-gray-500 dark:text-gray-200 text-sm mt-1">Team engagement intelligence</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex gap-1">
@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  period === p ? "bg-violet-100 text-violet-700" : "text-gray-500 hover:bg-gray-100"
+                  period === p ? "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300" : "text-gray-500 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
               >
                 {p === "4w" ? "4 weeks" : p === "8w" ? "8 weeks" : "12 weeks"}
@@ -117,7 +117,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardContent className="p-5">
             <p className="text-xs text-gray-500 font-medium mb-2">Avg Response Rate</p>
-            <p className="text-3xl font-bold text-gray-900">68%</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">68%</p>
             <div className="flex items-center gap-1 mt-1">
               <TrendingUp className="h-3 w-3 text-emerald-500" />
               <span className="text-xs font-medium text-emerald-600">+12% vs last month</span>
@@ -236,7 +236,7 @@ export default function AnalyticsPage() {
                         <div className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
                         <span className="text-gray-600">{s.name}</span>
                       </div>
-                      <span className="font-medium text-gray-900">{s.value}%</span>
+                      <span className="font-medium text-gray-100">{s.value}%</span>
                     </div>
                   ))}
                 </div>

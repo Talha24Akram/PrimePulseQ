@@ -81,7 +81,7 @@ export default function SurveysPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Surveys</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Surveys</h1>
           <p className="text-gray-500 text-sm mt-1">{mockSurveys.length} surveys total</p>
         </div>
         <Link href="/surveys/new">
@@ -110,8 +110,8 @@ export default function SurveysPage() {
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
                 filter === f
-                  ? "bg-violet-100 text-violet-700"
-                  : "text-gray-500 hover:bg-gray-100"
+                  ? "bg-violet-100 text-violet-700 border border-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30"
+                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
               }`}
             >
               {f}
@@ -130,7 +130,7 @@ export default function SurveysPage() {
                   <div className="flex items-center gap-3 mb-1">
                     <Link
                       href={`/surveys/${survey.id}`}
-                      className="font-semibold text-gray-900 hover:text-violet-600 truncate"
+                      className="font-semibold text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 truncate"
                     >
                       {survey.title}
                     </Link>
@@ -150,7 +150,7 @@ export default function SurveysPage() {
                           value={survey.sent_count > 0 ? (survey.response_count / survey.sent_count) * 100 : 0}
                           className="w-24"
                         />
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                           {survey.sent_count > 0
                             ? Math.round((survey.response_count / survey.sent_count) * 100)
                             : 0}%
@@ -159,16 +159,16 @@ export default function SurveysPage() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-400">Responses</p>
-                      <p className="text-sm font-medium text-gray-700">{survey.response_count} / {survey.sent_count}</p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{survey.response_count} / {survey.sent_count}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400">Created</p>
-                      <p className="text-sm font-medium text-gray-700">{formatDate(survey.created_at)}</p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{formatDate(survey.created_at)}</p>
                     </div>
                     {survey.closes_at && (
                       <div>
                         <p className="text-xs text-gray-400">Closes</p>
-                        <p className="text-sm font-medium text-gray-700">{formatDate(survey.closes_at)}</p>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{formatDate(survey.closes_at)}</p>
                       </div>
                     )}
                   </div>

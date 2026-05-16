@@ -6,6 +6,7 @@ import { MessageSquare, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
@@ -47,14 +48,14 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center">
-          <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+          <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Check your email</h1>
           <p className="text-gray-500 mb-6">
-            We sent a confirmation link to <strong>{form.email}</strong>. Click it to activate your account.
+            We sent a confirmation link to <strong className="text-gray-900 dark:text-gray-200">{form.email}</strong>. Click it to activate your account.
           </p>
           <Link href="/login">
             <Button variant="outline">Back to sign in</Button>
@@ -65,22 +66,25 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
             <div className="h-9 w-9 rounded-xl bg-violet-600 flex items-center justify-center">
               <MessageSquare className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold text-gray-900 text-xl">PulseSurvey</span>
+            <span className="font-bold text-gray-900 dark:text-white text-xl">PrimePulseQ</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Create your workspace</h1>
-          <p className="text-gray-500 mt-1 text-sm">Free for up to 10 employees · No credit card required</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create your workspace</h1>
+          <p className="text-gray-500 mt-1 text-sm">Start with a free 1-week trial on Growth</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm dark:shadow-2xl dark:shadow-black/40 p-8">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600">
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400">
               {error}
             </div>
           )}
@@ -137,7 +141,7 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -150,13 +154,16 @@ export default function SignupPage() {
           </form>
 
           <p className="text-xs text-gray-400 text-center mt-4">
-            By signing up you agree to our Terms of Service and Privacy Policy.
+            By signing up you agree to our{" "}
+            <Link href="/terms" className="text-violet-600 dark:text-violet-400 hover:underline">Terms of Service</Link>
+            {" "}and{" "}
+            <Link href="/privacy" className="text-violet-600 dark:text-violet-400 hover:underline">Privacy Policy</Link>.
           </p>
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-violet-600 font-medium hover:underline">
+          <Link href="/login" className="text-violet-600 dark:text-violet-400 font-medium hover:underline">
             Sign in
           </Link>
         </p>

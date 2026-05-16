@@ -124,22 +124,22 @@ export default function NewSurveyPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">New Survey</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">New Survey</h1>
           <p className="text-sm text-gray-500 mt-0.5">Build your pulse survey</p>
         </div>
       </div>
 
       {/* Templates */}
       <div className="mb-8">
-        <p className="text-sm font-medium text-gray-700 mb-3">Start from a template</p>
+        <p className="text-sm font-medium text-gray-300 mb-3">Start from a template</p>
         <div className="flex gap-3 flex-wrap">
           {templates.map((template) => (
             <button
               key={template.name}
               onClick={() => applyTemplate(template)}
-              className="text-left p-4 rounded-xl border border-gray-200 hover:border-violet-400 hover:bg-violet-50 transition-colors group"
+              className="text-left p-4 rounded-xl border border-white/10 bg-white/5 hover:border-violet-500/50 hover:bg-violet-500/10 transition-colors group"
             >
-              <p className="font-medium text-gray-900 text-sm group-hover:text-violet-700">{template.name}</p>
+              <p className="font-medium text-gray-200 text-sm group-hover:text-violet-300">{template.name}</p>
               <p className="text-xs text-gray-500 mt-0.5">{template.description}</p>
             </button>
           ))}
@@ -188,7 +188,7 @@ export default function NewSurveyPage() {
       {/* Questions */}
       <div className="space-y-4 mb-6">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Questions</h2>
+          <h2 className="font-semibold text-white">Questions</h2>
           <Badge variant="secondary">{questions.length} question{questions.length !== 1 ? "s" : ""}</Badge>
         </div>
 
@@ -199,7 +199,7 @@ export default function NewSurveyPage() {
                 <GripVertical className="h-5 w-5 text-gray-300 mt-2 flex-shrink-0" />
                 <div className="flex-1 space-y-4">
                   <div className="flex items-start gap-3">
-                    <span className="flex-shrink-0 h-6 w-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center mt-2">
+                    <span className="flex-shrink-0 h-6 w-6 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold flex items-center justify-center mt-2">
                       {index + 1}
                     </span>
                     <div className="flex-1 space-y-3">
@@ -222,7 +222,7 @@ export default function NewSurveyPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={question.required}
@@ -237,17 +237,17 @@ export default function NewSurveyPage() {
 
                   {/* Scale preview */}
                   {question.type === "scale" && (
-                    <div className="ml-9 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                    <div className="ml-9 p-3 rounded-lg bg-white/5 border border-white/10">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">1 (Poor)</span>
+                        <span className="text-xs text-gray-500">1 (Poor)</span>
                         <div className="flex gap-1">
                           {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-                            <div key={n} className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+                            <div key={n} className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-xs text-gray-400">
                               {n}
                             </div>
                           ))}
                         </div>
-                        <span className="text-xs text-gray-400">10 (Excellent)</span>
+                        <span className="text-xs text-gray-500">10 (Excellent)</span>
                       </div>
                     </div>
                   )}
@@ -257,7 +257,7 @@ export default function NewSurveyPage() {
                     <div className="ml-9 space-y-2">
                       {question.options.map((option, optIndex) => (
                         <div key={optIndex} className="flex items-center gap-2">
-                          <div className="h-4 w-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                          <div className="h-4 w-4 rounded-full border-2 border-white/20 flex-shrink-0" />
                           <Input
                             placeholder={`Option ${optIndex + 1}`}
                             value={option}
@@ -290,7 +290,7 @@ export default function NewSurveyPage() {
                   {question.type === "yes_no" && (
                     <div className="ml-9 flex gap-3">
                       {["Yes", "No"].map((opt) => (
-                        <div key={opt} className="px-6 py-2 rounded-lg border-2 border-gray-200 text-sm text-gray-500">
+                        <div key={opt} className="px-6 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-gray-400">
                           {opt}
                         </div>
                       ))}
@@ -319,7 +319,7 @@ export default function NewSurveyPage() {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-4 border-t border-white/8">
         <Link href="/surveys">
           <Button variant="ghost">Cancel</Button>
         </Link>

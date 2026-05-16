@@ -6,6 +6,7 @@ import { MessageSquare, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -34,22 +35,25 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
             <div className="h-9 w-9 rounded-xl bg-violet-600 flex items-center justify-center">
               <MessageSquare className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold text-gray-900 text-xl">PulseSurvey</span>
+            <span className="font-bold text-gray-900 dark:text-white text-xl">PrimePulseQ</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome back</h1>
           <p className="text-gray-500 mt-1 text-sm">Sign in to your workspace</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm dark:shadow-2xl dark:shadow-black/40 p-8">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600">
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400">
               {error}
             </div>
           )}
@@ -70,7 +74,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-xs text-violet-600 hover:underline">
+                <Link href="/forgot-password" className="text-xs text-violet-600 dark:text-violet-400 hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -87,7 +91,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -102,7 +106,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-violet-600 font-medium hover:underline">
+          <Link href="/signup" className="text-violet-600 dark:text-violet-400 font-medium hover:underline">
             Sign up free
           </Link>
         </p>

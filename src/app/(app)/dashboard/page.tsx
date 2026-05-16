@@ -36,7 +36,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">Thursday, May 15, 2025</p>
         </div>
         <Link href="/surveys/new">
@@ -76,7 +76,7 @@ export default function DashboardPage() {
                 +12%
               </div>
             </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.response_rate}%</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.response_rate}%</p>
             <Progress value={stats.response_rate} className="mt-3" />
           </CardContent>
         </Card>
@@ -85,9 +85,9 @@ export default function DashboardPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm text-gray-500 font-medium">Active Surveys</p>
-              <FileText className="h-4 w-4 text-gray-300" />
+              <FileText className="h-4 w-4 text-gray-400" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.active_surveys}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.active_surveys}</p>
             <p className="text-xs text-gray-400 mt-2">of 3 total this week</p>
           </CardContent>
         </Card>
@@ -131,8 +131,8 @@ export default function DashboardPage() {
                       className="rounded-t-sm transition-all"
                       style={{
                         height: `${(val / 100) * 160}px`,
-                        backgroundColor: i === weekData.length - 1 ? "#7c3aed" : "#ede9fe",
                       }}
+                      className={i === weekData.length - 1 ? "bg-violet-600" : "bg-violet-200 dark:bg-violet-900/50"}
                     />
                   </div>
                 ))}
@@ -153,12 +153,12 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {insights.map((insight, i) => (
-              <div key={i} className={`flex gap-3 p-3 rounded-lg text-sm ${insight.type === "positive" ? "bg-emerald-50" : "bg-amber-50"}`}>
+              <div key={i} className={`flex gap-3 p-3 rounded-lg text-sm ${insight.type === "positive" ? "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20" : "bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20"}`}>
                 {insight.type === "positive"
-                  ? <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                  : <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  ? <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                  : <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 }
-                <p className={insight.type === "positive" ? "text-emerald-800" : "text-amber-800"}>
+                <p className={insight.type === "positive" ? "text-emerald-800 dark:text-emerald-300" : "text-amber-800 dark:text-amber-300"}>
                   {insight.message}
                 </p>
               </div>
@@ -180,18 +180,18 @@ export default function DashboardPage() {
         <CardContent className="p-0">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-50">
-                <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Survey</th>
-                <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Status</th>
-                <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Responses</th>
-                <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Response rate</th>
+              <tr className="border-b border-gray-100 dark:border-white/8">
+                <th className="text-left text-xs text-gray-500 font-medium px-6 py-3">Survey</th>
+                <th className="text-left text-xs text-gray-500 font-medium px-6 py-3">Status</th>
+                <th className="text-left text-xs text-gray-500 font-medium px-6 py-3">Responses</th>
+                <th className="text-left text-xs text-gray-500 font-medium px-6 py-3">Response rate</th>
               </tr>
             </thead>
             <tbody>
               {recentSurveys.map((survey) => (
-                <tr key={survey.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                <tr key={survey.id} className="border-b border-gray-100 dark:border-white/8 last:border-0 hover:bg-gray-50 dark:hover:bg-white/3">
                   <td className="px-6 py-4">
-                    <Link href={`/surveys/${survey.id}`} className="font-medium text-sm text-gray-900 hover:text-violet-600">
+                    <Link href={`/surveys/${survey.id}`} className="font-medium text-sm text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400">
                       {survey.title}
                     </Link>
                   </td>
@@ -211,7 +211,7 @@ export default function DashboardPage() {
                         value={survey.sent > 0 ? (survey.responses / survey.sent) * 100 : 0}
                         className="w-20"
                       />
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
                         {survey.sent > 0 ? Math.round((survey.responses / survey.sent) * 100) : 0}%
                       </span>
                     </div>

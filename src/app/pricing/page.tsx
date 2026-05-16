@@ -2,14 +2,15 @@ import Link from "next/link";
 import { CheckCircle2, MessageSquare, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const tiers = [
   {
     name: "Starter",
-    price: "$19",
+    price: "$49",
     period: "/month",
     description: "Perfect for small teams and indie startups getting started.",
-    employees: "Up to 10 employees",
+    employees: "Up to 100 employees",
     highlight: false,
     badge: null,
     features: [
@@ -22,7 +23,7 @@ const tiers = [
       "2 survey templates",
       "Email support",
     ],
-    cta: "Start free",
+    cta: "Get started",
     href: "/signup",
   },
   {
@@ -30,9 +31,10 @@ const tiers = [
     price: "$149",
     period: "/month",
     description: "The complete toolkit for growing remote and hybrid teams.",
-    employees: "Up to 100 employees",
+    employees: "Up to 500 employees",
     highlight: true,
     badge: "Most popular",
+    trial: "1 week free trial",
     features: [
       "Everything in Starter",
       "Slack & Teams integration",
@@ -46,12 +48,12 @@ const tiers = [
       "12-month history",
       "Priority support",
     ],
-    cta: "Get started",
+    cta: "Start free trial",
     href: "/signup",
   },
   {
     name: "Enterprise",
-    price: "$999",
+    price: "$499",
     period: "/month",
     description: "Workforce intelligence for large organizations.",
     employees: "Unlimited employees",
@@ -71,8 +73,8 @@ const tiers = [
       "Compliance tools",
       "SLA & dedicated support",
     ],
-    cta: "Contact sales",
-    href: "mailto:sales@pulsesurvey.io",
+    cta: "Get started",
+    href: "/signup",
   },
 ];
 
@@ -90,8 +92,8 @@ const faqs = [
     a: "Absolutely. Employees receive a unique link and respond without logging in — by design.",
   },
   {
-    q: "Do you offer a free trial?",
-    a: "The Starter plan is free forever for up to 10 employees. No credit card required.",
+    q: "What does the Growth free trial include?",
+    a: "Your first week on Growth is completely free — full access to every feature. Your subscription starts automatically at the end of the trial unless you cancel.",
   },
   {
     q: "Can I cancel anytime?",
@@ -105,17 +107,18 @@ const faqs = [
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b border-gray-200 dark:border-white/8 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-6 flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
               <MessageSquare className="h-4 w-4 text-white" />
             </div>
-            <span className="font-bold text-gray-900 text-lg">PulseSurvey</span>
+            <span className="font-bold text-gray-900 dark:text-white text-lg">PrimePulseQ</span>
           </Link>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link href="/login"><Button variant="ghost" size="sm">Sign in</Button></Link>
             <Link href="/signup"><Button size="sm">Get started free</Button></Link>
           </div>
@@ -124,8 +127,8 @@ export default function PricingPage() {
 
       {/* Header */}
       <section className="pt-20 pb-16 px-6 text-center">
-        <h1 className="text-5xl font-bold text-gray-900 mb-4">Simple, honest pricing</h1>
-        <p className="text-xl text-gray-500 max-w-xl mx-auto">
+        <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">Simple, honest pricing</h1>
+        <p className="text-xl text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
           No per-seat traps. No surprise enterprise add-ons. Pay for what you actually use.
         </p>
       </section>
@@ -138,8 +141,8 @@ export default function PricingPage() {
               key={tier.name}
               className={`rounded-2xl border p-8 relative ${
                 tier.highlight
-                  ? "border-violet-600 shadow-2xl shadow-violet-100 scale-105"
-                  : "border-gray-200"
+                  ? "border-violet-500 bg-violet-600/10 shadow-2xl shadow-violet-900/40 scale-105"
+                  : "border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900"
               }`}
             >
               {tier.badge && (
@@ -148,26 +151,32 @@ export default function PricingPage() {
                 </div>
               )}
               <div className="mb-6">
-                <h2 className="text-xl font-bold text-gray-900">{tier.name}</h2>
-                <p className="text-gray-500 text-sm mt-1">{tier.description}</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{tier.name}</h2>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{tier.description}</p>
               </div>
               <div className="mb-2">
-                <span className="text-5xl font-bold text-gray-900">{tier.price}</span>
-                <span className="text-gray-500 text-sm">{tier.period}</span>
+                <span className="text-5xl font-bold text-gray-900 dark:text-white">{tier.price}</span>
+                <span className="text-gray-400 text-sm">{tier.period}</span>
               </div>
-              <p className="text-sm text-violet-600 font-medium mb-6">{tier.employees}</p>
+              <p className="text-sm text-violet-600 dark:text-violet-400 font-medium mb-1">{tier.employees}</p>
+              {"trial" in tier && (
+                <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-5">
+                  ✦ {(tier as typeof tier & { trial: string }).trial}
+                </p>
+              )}
+              {!("trial" in tier) && <div className="mb-6" />}
               <Link href={tier.href}>
                 <Button
-                  className={`w-full mb-8 ${tier.highlight ? "" : ""}`}
+                  className="w-full mb-8"
                   variant={tier.highlight ? "default" : "outline"}
                 >
-                  {tier.cta} {tier.highlight && <ArrowRight className="h-4 w-4" />}
+                  {tier.cta} <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <ul className="space-y-3">
                 {tier.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3 text-sm text-gray-700">
-                    <CheckCircle2 className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                  <li key={feature} className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300">
+                    <CheckCircle2 className="h-4 w-4 text-violet-600 dark:text-violet-500 mt-0.5 flex-shrink-0" />
                     {feature}
                   </li>
                 ))}
@@ -178,14 +187,14 @@ export default function PricingPage() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24 px-6 bg-gray-50">
+      <section className="py-24 px-6 bg-gray-100 dark:bg-white/3">
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Frequently asked questions</h2>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-12">Frequently asked questions</h2>
           <div className="space-y-6">
             {faqs.map((faq) => (
-              <div key={faq.q} className="bg-white rounded-xl border border-gray-100 p-6">
-                <h3 className="font-semibold text-gray-900 mb-2">{faq.q}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{faq.a}</p>
+              <div key={faq.q} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-white/8 p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{faq.q}</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">{faq.a}</p>
               </div>
             ))}
           </div>
@@ -195,17 +204,23 @@ export default function PricingPage() {
       {/* CTA */}
       <section className="py-20 px-6 bg-violet-600 text-center">
         <h2 className="text-3xl font-bold text-white mb-4">Ready to hear from your team?</h2>
-        <p className="text-violet-200 mb-8">Free for up to 10 employees. No credit card required.</p>
+        <p className="text-violet-200 mb-8">Try Growth free for one week. Cancel anytime.</p>
         <Link href="/signup">
           <Button size="lg" className="bg-white text-violet-700 hover:bg-violet-50">
-            Start for free <ArrowRight className="h-4 w-4" />
+            Start free trial <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 py-8 px-6 text-center">
-        <p className="text-sm text-gray-400">© 2025 PulseSurvey. All rights reserved.</p>
+      <footer className="border-t border-gray-200 dark:border-white/8 py-8 px-6 bg-gray-50 dark:bg-gray-950">
+        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-sm text-gray-400">© 2026 PrimePulseQ. All rights reserved.</p>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">Terms of Service</Link>
+          </div>
+        </div>
       </footer>
     </div>
   );
