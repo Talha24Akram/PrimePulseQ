@@ -32,14 +32,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <div className="mb-8">
+    <div className="p-4 sm:p-8 max-w-3xl mx-auto">
+      <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
         <p className="text-gray-500 text-sm mt-1">Manage your workspace preferences</p>
       </div>
 
       <Tabs defaultValue="company">
-        <TabsList className="mb-8">
+        <TabsList className="mb-6 sm:mb-8 flex-wrap h-auto gap-1">
           <TabsTrigger value="company" className="gap-2">
             <Building2 className="h-3.5 w-3.5" /> Company
           </TabsTrigger>

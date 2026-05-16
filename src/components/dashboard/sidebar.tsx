@@ -7,7 +7,6 @@ import {
   Users,
   BarChart3,
   Settings,
-  MessageSquare,
   LogOut,
   ChevronRight,
 } from "lucide-react";
@@ -33,13 +32,58 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r bg-white border-gray-200 dark:bg-gray-900 dark:border-white/5">
-      <div className="flex h-16 items-center gap-2.5 px-6 border-b border-gray-200 dark:border-white/5">
-        <img src="/logo.png" alt="PrimePulseQ" className="h-8 w-8 object-contain" />
-        <span className="font-bold text-gray-900 dark:text-white tracking-tight">PrimePulseQ</span>
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-white border-gray-200 dark:bg-gray-900 dark:border-white/5 flex-shrink-0">
+        <div className="flex h-16 items-center gap-2.5 px-6 border-b border-gray-200 dark:border-white/5">
+          <img src="/logo.png" alt="PrimePulseQ" className="h-8 w-8 object-contain" />
+          <span className="font-bold text-gray-900 dark:text-white tracking-tight">PrimePulseQ</span>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-0.5">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all group border",
+                  isActive
+                    ? "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-600/15 dark:text-violet-300 dark:border-violet-500/20"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-800 border-transparent dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100"
+                )}
+              >
+                <item.icon className={cn(
+                  "h-4 w-4 shrink-0",
+                  isActive ? "text-violet-600 dark:text-violet-400" : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300"
+                )} />
+                <span className="flex-1">{item.label}</span>
+                {isActive && <ChevronRight className="h-3 w-3 text-violet-400/60" />}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-gray-200 dark:border-white/5">
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all border border-transparent hover:border-red-200 dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-400 dark:hover:border-red-500/20"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/5 flex items-center px-4 gap-3">
+        <img src="/logo.png" alt="PrimePulseQ" className="h-7 w-7 object-contain" />
+        <span className="font-bold text-gray-900 dark:text-white text-base">PrimePulseQ</span>
       </div>
 
-      <nav className="flex-1 p-4 space-y-0.5">
+      {/* Mobile bottom nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-white/5 flex items-center justify-around px-2 h-16 safe-area-pb">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -47,32 +91,25 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all group border",
+                "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all flex-1",
                 isActive
-                  ? "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-600/15 dark:text-violet-300 dark:border-violet-500/20"
-                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-800 border-transparent dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100"
+                  ? "text-violet-600 dark:text-violet-400"
+                  : "text-gray-400 dark:text-gray-500"
               )}
             >
-              <item.icon className={cn(
-                "h-4 w-4 shrink-0",
-                isActive ? "text-violet-600 dark:text-violet-400" : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300"
-              )} />
-              <span className="flex-1">{item.label}</span>
-              {isActive && <ChevronRight className="h-3 w-3 text-violet-400/60" />}
+              <item.icon className="h-5 w-5" />
+              <span className="text-xs font-medium">{item.label}</span>
             </Link>
           );
         })}
-      </nav>
-
-      <div className="p-4 border-t border-gray-200 dark:border-white/5">
         <button
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all border border-transparent hover:border-red-200 dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-400 dark:hover:border-red-500/20"
+          className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all flex-1 text-gray-400 dark:text-gray-500"
         >
-          <LogOut className="h-4 w-4 shrink-0" />
-          Sign out
+          <LogOut className="h-5 w-5" />
+          <span className="text-xs font-medium">Sign out</span>
         </button>
-      </div>
-    </aside>
+      </nav>
+    </>
   );
 }

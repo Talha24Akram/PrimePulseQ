@@ -110,36 +110,36 @@ export default function PricingPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-gray-200 dark:border-white/8 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-6 flex h-16 items-center justify-between">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <img src="/logo.png" alt="PrimePulseQ" className="h-8 w-8 object-contain" />
             <span className="font-bold text-gray-900 dark:text-white text-lg">PrimePulseQ</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link href="/login"><Button variant="ghost" size="sm">Sign in</Button></Link>
-            <Link href="/signup"><Button size="sm">Get started free</Button></Link>
+            <Link href="/login" className="hidden sm:block"><Button variant="ghost" size="sm">Sign in</Button></Link>
+            <Link href="/signup"><Button size="sm">Get started</Button></Link>
           </div>
         </div>
       </nav>
 
       {/* Header */}
-      <section className="pt-20 pb-16 px-6 text-center">
-        <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">Simple, honest pricing</h1>
-        <p className="text-xl text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
+      <section className="pt-12 sm:pt-20 pb-10 sm:pb-16 px-4 sm:px-6 text-center">
+        <h1 className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-4">Simple, honest pricing</h1>
+        <p className="text-base sm:text-xl text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
           No per-seat traps. No surprise enterprise add-ons. Pay for what you actually use.
         </p>
       </section>
 
       {/* Pricing tiers */}
-      <section className="pb-24 px-6">
-        <div className="mx-auto max-w-5xl grid md:grid-cols-3 gap-8 items-start">
+      <section className="pb-16 sm:pb-24 px-4 sm:px-6">
+        <div className="mx-auto max-w-5xl grid sm:grid-cols-3 gap-6 items-start">
           {tiers.map((tier) => (
             <div
               key={tier.name}
-              className={`rounded-2xl border p-8 relative ${
+              className={`rounded-2xl border p-6 sm:p-8 relative ${
                 tier.highlight
-                  ? "border-violet-500 bg-violet-600/10 shadow-2xl shadow-violet-900/40 scale-105"
+                  ? "border-violet-500 bg-violet-600/10 shadow-2xl shadow-violet-900/40 sm:scale-105"
                   : "border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900"
               }`}
             >
