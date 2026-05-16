@@ -128,11 +128,10 @@ export default function DashboardPage() {
                 {weekData.map((val, i) => (
                   <div key={i} className="flex-1 flex flex-col justify-end gap-1">
                     <div
-                      className="rounded-t-sm transition-all"
+                      className={`rounded-t-sm transition-all ${i === weekData.length - 1 ? "bg-violet-600" : "bg-violet-200 dark:bg-violet-900/50"}`}
                       style={{
                         height: `${(val / 100) * 160}px`,
                       }}
-                      className={i === weekData.length - 1 ? "bg-violet-600" : "bg-violet-200 dark:bg-violet-900/50"}
                     />
                   </div>
                 ))}
