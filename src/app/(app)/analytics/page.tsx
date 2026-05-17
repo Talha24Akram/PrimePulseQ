@@ -511,11 +511,12 @@ export default function AnalyticsPage() {
                           risk: "low",
                         },
                       ].map((signal) => {
-                        const colors = {
+                        const colorMap = {
                           low: { bg: "bg-emerald-50 dark:bg-emerald-500/10", text: "text-emerald-700 dark:text-emerald-300", badge: "success" as const },
                           moderate: { bg: "bg-amber-50 dark:bg-amber-500/10", text: "text-amber-700 dark:text-amber-300", badge: "warning" as const },
                           high: { bg: "bg-red-50 dark:bg-red-500/10", text: "text-red-700 dark:text-red-300", badge: "destructive" as const },
-                        }[signal.risk];
+                        };
+                        const colors = colorMap[signal.risk as keyof typeof colorMap] ?? colorMap.low;
                         return (
                           <div key={signal.label} className={`flex items-center justify-between p-3 rounded-lg border ${colors.bg}`}>
                             <div className="flex items-center gap-3">
