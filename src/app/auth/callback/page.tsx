@@ -24,31 +24,25 @@ export default function AuthCallbackPage() {
       }
 
       if (code) {
-        setStatus("Exchanging code for session...");
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) {
-          setStatus(`Auth error: ${error.message}`);
-          setTimeout(() => router.replace("/login"), 3000);
-          return;
-        }
+        setStatus("Signing you in...");
+        const { data } = await supabase.auth.exchangeCodeForSession(code);
         if (data.session) {
-          setStatus("Session established! Redirecting...");
           router.replace("/dashboard");
           return;
         }
+        // Exchange may fail if Supabase already handled it — fall through to getSession()
       }
 
-      // No code in URL — check if session already exists (e.g. implicit flow)
-      setStatus("Checking existing session...");
+      // Check if session already exists
+      setStatus("Signing you in...");
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        setStatus("Session found! Redirecting...");
         router.replace("/dashboard");
         return;
       }
 
       // Last resort: listen for auth state change
-      setStatus("Waiting for authentication...");
+      setStatus("Signing you in...");
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if (event === "SIGNED_IN" && session) {
           subscription.unsubscribe();
@@ -59,8 +53,7 @@ export default function AuthCallbackPage() {
       // Timeout after 10 seconds
       setTimeout(() => {
         subscription.unsubscribe();
-        setStatus("Timed out. No session found.");
-        setTimeout(() => router.replace("/login"), 2000);
+        router.replace("/login");
       }, 10000);
     }
 
