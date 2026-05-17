@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Copy, Send, BarChart3, Users, Clock, CheckCircle2, Check } from "lucide-react";
+import { ArrowLeft, Copy, Send, BarChart3, Users, Clock, CheckCircle2, Check, Mail, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +34,13 @@ interface Response {
   answers: Record<string, string | number>;
 }
 
+interface Employee {
+  id: string;
+  name: string | null;
+  email: string;
+  department: string | null;
+}
+
 export default function SurveyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [survey, setSurvey] = useState<SurveyDetail | null>(null);
@@ -42,6 +49,13 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activating, setActivating] = useState(false);
+
+  // Email modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ sent: number; failed: number } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -79,6 +93,47 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
     const supabase = createClient();
     await supabase.from("surveys").update({ status: "closed" }).eq("id", id);
     setSurvey((prev) => prev ? { ...prev, status: "closed" } : prev);
+  }
+
+  async function openEmailModal() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("employees")
+      .select("id, name, email, department")
+      .eq("workspace_id", user.id)
+      .eq("is_active", true)
+      .order("name");
+    setEmployees((data ?? []) as Employee[]);
+    setSelectedIds(new Set((data ?? []).map((e: Employee) => e.id)));
+    setSendResult(null);
+    setShowEmailModal(true);
+  }
+
+  async function sendEmails() {
+    setSending(true);
+    setSendResult(null);
+    try {
+      const res = await fetch("/api/send-survey", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ surveyId: id, employeeIds: Array.from(selectedIds) }),
+      });
+      const data = await res.json();
+      setSendResult({ sent: data.sent ?? 0, failed: data.failed ?? 0 });
+    } catch {
+      setSendResult({ sent: 0, failed: selectedIds.size });
+    }
+    setSending(false);
+  }
+
+  function toggleEmployee(empId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(empId) ? next.delete(empId) : next.add(empId);
+      return next;
+    });
   }
 
   // Aggregate answers per question
@@ -139,6 +194,12 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? "Copied!" : "Copy link"}
           </Button>
+          {survey.status === "active" && (
+            <Button size="sm" variant="outline" className="gap-2" onClick={openEmailModal}>
+              <Mail className="h-3.5 w-3.5" />
+              Send emails
+            </Button>
+          )}
           {survey.status === "draft" && (
             <Button size="sm" className="gap-2" onClick={activateSurvey} disabled={activating}>
               <Send className="h-3.5 w-3.5" />
@@ -185,6 +246,89 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
           </Button>
         </CardContent>
       </Card>
+
+      {/* Email modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl">
+            {/* Modal header */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-white/10">
+              <div>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Send survey by email</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{selectedIds.size} of {employees.length} employees selected</p>
+              </div>
+              <button onClick={() => setShowEmailModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Select all */}
+            <div className="px-5 py-3 border-b border-gray-100 dark:border-white/10 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === employees.length && employees.length > 0}
+                  onChange={(e) => setSelectedIds(e.target.checked ? new Set(employees.map((emp) => emp.id)) : new Set())}
+                  className="rounded"
+                />
+                Select all
+              </label>
+              <span className="text-xs text-gray-400">{employees.length} active employees</span>
+            </div>
+
+            {/* Employee list */}
+            <div className="overflow-y-auto max-h-64 px-5 py-3 space-y-2">
+              {employees.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">
+                  No active employees found. Add employees first.
+                </p>
+              ) : (
+                employees.map((emp) => (
+                  <label key={emp.id} className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(emp.id)}
+                      onChange={() => toggleEmployee(emp.id)}
+                      className="rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                        {emp.name ?? emp.email}
+                      </p>
+                      {emp.name && <p className="text-xs text-gray-400 truncate">{emp.email}</p>}
+                    </div>
+                    {emp.department && (
+                      <span className="text-xs text-gray-400 flex-shrink-0">{emp.department}</span>
+                    )}
+                  </label>
+                ))
+              )}
+            </div>
+
+            {/* Result */}
+            {sendResult && (
+              <div className={`mx-5 mb-2 p-3 rounded-lg text-sm ${sendResult.failed === 0 ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300"}`}>
+                {sendResult.sent > 0 && `✓ ${sendResult.sent} email${sendResult.sent !== 1 ? "s" : ""} sent. `}
+                {sendResult.failed > 0 && `${sendResult.failed} failed.`}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 dark:border-white/10">
+              <Button variant="outline" size="sm" onClick={() => setShowEmailModal(false)}>Cancel</Button>
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={sendEmails}
+                disabled={sending || selectedIds.size === 0 || employees.length === 0}
+              >
+                <Mail className="h-3.5 w-3.5" />
+                {sending ? "Sending..." : `Send to ${selectedIds.size}`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Questions & Responses */}
       <Tabs defaultValue="results">
