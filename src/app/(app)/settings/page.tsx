@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useTheme } from "next-themes";
 import { useSearchParams } from "next/navigation";
 import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2, Sun, Moon } from "lucide-react";
@@ -16,6 +16,14 @@ import { TierGate } from "@/components/tier-gate";
 import { TIER_LABELS, canAccess } from "@/lib/tiers";
 
 export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsInner />
+    </Suspense>
+  );
+}
+
+function SettingsInner() {
   const { theme, setTheme } = useTheme();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [company, setCompany] = useState({ name: "", slug: "", website: "" });
