@@ -29,6 +29,13 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const isCallbackRoute = request.nextUrl.pathname.startsWith("/auth/");
+
+  // Don't interfere with the OAuth callback — session is established client-side
+  if (isCallbackRoute) {
+    return supabaseResponse;
+  }
+
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup") ||
     request.nextUrl.pathname.startsWith("/forgot-password");
