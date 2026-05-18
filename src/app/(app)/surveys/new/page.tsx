@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -150,6 +151,7 @@ export default function NewSurveyPage() {
       if (qError) { setSaveError(qError.message); setSaving(false); return; }
     }
 
+    await logAudit("survey.created", { resourceType: "survey", resourceId: survey.id, metadata: { title: title.trim(), status } });
     setSaving(false);
     router.push("/surveys");
   }

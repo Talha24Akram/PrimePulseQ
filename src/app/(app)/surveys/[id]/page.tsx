@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Copy, Send, BarChart3, Users, Clock, CheckCircle2, Check, Mail, X } from "lucide-react";
+import { ArrowLeft, Copy, Send, BarChart3, Users, Clock, CheckCircle2, Check, Mail, X, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
+import { logAudit } from "@/lib/audit";
+import { exportSurveyPDF } from "@/lib/export-pdf";
 
 interface Question {
   id: string;
@@ -86,6 +88,7 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
     const supabase = createClient();
     await supabase.from("surveys").update({ status: "active" }).eq("id", id);
     setSurvey((prev) => prev ? { ...prev, status: "active" } : prev);
+    await logAudit("survey.activated", { resourceType: "survey", resourceId: id });
     setActivating(false);
   }
 
@@ -93,6 +96,7 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
     const supabase = createClient();
     await supabase.from("surveys").update({ status: "closed" }).eq("id", id);
     setSurvey((prev) => prev ? { ...prev, status: "closed" } : prev);
+    await logAudit("survey.closed", { resourceType: "survey", resourceId: id });
   }
 
   async function openEmailModal() {
@@ -122,6 +126,7 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
       });
       const data = await res.json();
       setSendResult({ sent: data.sent ?? 0, failed: data.failed ?? 0 });
+      if (data.sent > 0) await logAudit("survey.emails_sent", { resourceType: "survey", resourceId: id, metadata: { count: data.sent } });
     } catch {
       setSendResult({ sent: 0, failed: selectedIds.size });
     }
@@ -194,6 +199,15 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? "Copied!" : "Copy link"}
           </Button>
+          {responses.length > 0 && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={async () => {
+              exportSurveyPDF(survey, questions, responses);
+              await logAudit("pdf.exported", { resourceType: "survey", resourceId: id });
+            }}>
+              <FileDown className="h-3.5 w-3.5" />
+              Export PDF
+            </Button>
+          )}
           {survey.status === "active" && (
             <Button size="sm" variant="outline" className="gap-2" onClick={openEmailModal}>
               <Mail className="h-3.5 w-3.5" />

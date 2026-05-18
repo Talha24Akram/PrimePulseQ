@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useTheme } from "next-themes";
 import { useSearchParams } from "next/navigation";
-import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2, Sun, Moon } from "lucide-react";
+import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2, Sun, Moon, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useProfile } from "@/hooks/useProfile";
+import { createClient } from "@/lib/supabase/client";
 import { TierGate } from "@/components/tier-gate";
 import { TIER_LABELS, canAccess } from "@/lib/tiers";
 
@@ -36,6 +37,8 @@ function SettingsInner() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [auditLogs, setAuditLogs] = useState<{ id: string; action: string; actor_email: string | null; resource_type: string | null; metadata: Record<string, unknown> | null; created_at: string }[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get("tab") ?? "company";
@@ -97,6 +100,16 @@ function SettingsInner() {
           </TabsTrigger>
           <TabsTrigger value="integrations" className="gap-2">
             <Zap className="h-3.5 w-3.5" /> Integrations
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="gap-2" onClick={async () => {
+            if (auditLogs.length > 0) return;
+            setAuditLoading(true);
+            const supabase = createClient();
+            const { data } = await supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(100);
+            setAuditLogs((data ?? []) as typeof auditLogs);
+            setAuditLoading(false);
+          }}>
+            <ClipboardList className="h-3.5 w-3.5" /> Audit Log
           </TabsTrigger>
         </TabsList>
 
@@ -398,6 +411,56 @@ function SettingsInner() {
               );
             })}
           </div>
+        </TabsContent>
+
+        {/* Audit Log */}
+        <TabsContent value="audit">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Audit Log</CardTitle>
+              <CardDescription>All workspace actions for the last 100 events.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {auditLoading ? (
+                <p className="text-sm text-gray-400 py-6 text-center">Loading audit log...</p>
+              ) : auditLogs.length === 0 ? (
+                <p className="text-sm text-gray-400 py-6 text-center">No activity recorded yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 dark:border-white/10">
+                        <th className="text-left text-xs text-gray-400 font-medium py-2 pr-4">Action</th>
+                        <th className="text-left text-xs text-gray-400 font-medium py-2 pr-4">Actor</th>
+                        <th className="text-left text-xs text-gray-400 font-medium py-2 pr-4">Resource</th>
+                        <th className="text-left text-xs text-gray-400 font-medium py-2">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditLogs.map((log) => (
+                        <tr key={log.id} className="border-b border-gray-50 dark:border-white/5 last:border-0">
+                          <td className="py-2.5 pr-4">
+                            <span className="font-mono text-xs bg-gray-100 dark:bg-white/8 px-1.5 py-0.5 rounded text-violet-700 dark:text-violet-300">
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400 text-xs truncate max-w-[140px]">
+                            {log.actor_email ?? "system"}
+                          </td>
+                          <td className="py-2.5 pr-4 text-gray-500 text-xs">
+                            {log.resource_type ?? "—"}
+                          </td>
+                          <td className="py-2.5 text-gray-400 text-xs whitespace-nowrap">
+                            {new Date(log.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

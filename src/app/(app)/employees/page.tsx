@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
+import { logAudit } from "@/lib/audit";
 import { getEmployeeLimit, TIER_LABELS } from "@/lib/tiers";
 
 interface Employee {
@@ -88,6 +89,7 @@ export default function EmployeesPage() {
     if (error) {
       setAddError(error.message.includes("unique") ? "This email is already added." : error.message);
     } else {
+      await logAudit("employee.added", { resourceType: "employee", metadata: { email: newEmployee.email } });
       setShowAdd(false);
       setNewEmployee({ name: "", email: "", department: "", role: "" });
       await loadEmployees();
@@ -99,6 +101,7 @@ export default function EmployeesPage() {
     if (!confirm("Remove this employee from your workspace?")) return;
     const supabase = createClient();
     await supabase.from("employees").delete().eq("id", id);
+    await logAudit("employee.deleted", { resourceType: "employee", resourceId: id });
     setEmployees((prev) => prev.filter((e) => e.id !== id));
   }
 
@@ -123,6 +126,7 @@ export default function EmployeesPage() {
     }).filter((r) => r.email);
 
     await supabase.from("employees").upsert(rows, { onConflict: "workspace_id,email" });
+    await logAudit("employee.imported", { metadata: { count: rows.length } });
     await loadEmployees();
     e.target.value = "";
   }

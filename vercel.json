@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/send-scheduled-surveys",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}
