@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { notifyWebhooks } from "@/lib/webhooks";
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,10 +50,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No valid employees found" }, { status: 400 });
     }
 
-    // Fetch sender profile
+    // Fetch sender profile (including webhook URLs)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, company_name")
+      .select("full_name, company_name, slack_webhook_url, teams_webhook_url")
       .eq("id", user.id)
       .single();
 
@@ -81,6 +82,18 @@ export async function POST(request: NextRequest) {
 
     const sent = results.filter((r) => r.status === "fulfilled").length;
     const failed = results.filter((r) => r.status === "rejected").length;
+
+    // Post to Slack / Teams if configured
+    await notifyWebhooks(
+      (profile as { slack_webhook_url?: string })?.slack_webhook_url,
+      (profile as { teams_webhook_url?: string })?.teams_webhook_url,
+      {
+        title: `📋 Survey sent: ${survey.title}`,
+        text: `${sent} employee${sent !== 1 ? "s" : ""} have been invited to complete the survey.`,
+        surveyUrl,
+        companyName: fromName,
+      }
+    );
 
     return NextResponse.json({ sent, failed, total: employees.length });
   } catch (err) {

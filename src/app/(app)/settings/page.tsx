@@ -381,45 +381,37 @@ function SettingsInner() {
 
         {/* Integrations */}
         <TabsContent value="integrations">
-          <div className="space-y-4">
-            {[
-              {
-                name: "Slack",
-                desc: "Send survey links and weekly summaries directly to your Slack workspace.",
-                feature: "slack_integration" as const,
-                icon: "💬",
-              },
-              {
-                name: "Microsoft Teams",
-                desc: "Distribute surveys via Microsoft Teams channels.",
-                feature: "teams_integration" as const,
-                icon: "🟦",
-              },
-            ].map((integration) => {
-              const allowed = canAccess(integration.feature, tier, isOwner);
-              return (
-                <Card key={integration.name}>
-                  <CardContent className="p-5 flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-white/8 flex items-center justify-center text-2xl flex-shrink-0">
-                      {integration.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-semibold text-gray-100 text-sm">{integration.name}</p>
-                      </div>
-                      <p className="text-xs text-gray-500">{integration.desc}</p>
-                    </div>
-                    {allowed ? (
-                      <Button variant="default" size="sm">Connect</Button>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={() => window.location.href = "/settings?tab=billing"}>
-                        Upgrade
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="space-y-6">
+            <IntegrationCard
+              icon="💬"
+              name="Slack"
+              desc="Post survey links and summaries to a Slack channel via Incoming Webhook."
+              field="slack_webhook_url"
+              placeholder="https://hooks.slack.com/services/..."
+              helpUrl="https://api.slack.com/messaging/webhooks"
+              helpText="Get a webhook URL"
+              webhookType="slack"
+              profile={profile}
+              updateProfile={updateProfile}
+              tier={tier}
+              isOwner={isOwner}
+              feature="slack_integration"
+            />
+            <IntegrationCard
+              icon="🟦"
+              name="Microsoft Teams"
+              desc="Post survey links and summaries to a Teams channel via Incoming Webhook."
+              field="teams_webhook_url"
+              placeholder="https://xxx.webhook.office.com/webhookb2/..."
+              helpUrl="https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook"
+              helpText="Get a webhook URL"
+              webhookType="teams"
+              profile={profile}
+              updateProfile={updateProfile}
+              tier={tier}
+              isOwner={isOwner}
+              feature="teams_integration"
+            />
           </div>
         </TabsContent>
 
@@ -474,5 +466,116 @@ function SettingsInner() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ── Integration Card ─────────────────────────────────────────────────────────
+function IntegrationCard({
+  icon, name, desc, field, placeholder, helpUrl, helpText,
+  webhookType, profile, updateProfile, tier, isOwner, feature,
+}: {
+  icon: string; name: string; desc: string; field: string; placeholder: string;
+  helpUrl: string; helpText: string; webhookType: "slack" | "teams";
+  profile: { [key: string]: unknown } | null;
+  updateProfile: (data: Record<string, unknown>) => Promise<{ error: string | null }>;
+  tier: string; isOwner: boolean; feature: "slack_integration" | "teams_integration";
+}) {
+  const allowed = canAccess(feature, tier, isOwner);
+  const saved = (profile?.[field] as string) ?? "";
+  const [url, setUrl] = useState(saved);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState<"idle" | "saved" | "tested" | "error">("idle");
+  const [errMsg, setErrMsg] = useState("");
+
+  // Sync from profile once loaded
+  useEffect(() => { if (saved) setUrl(saved); }, [saved]);
+
+  async function handleSave() {
+    setSaving(true);
+    setStatus("idle");
+    const { error } = await updateProfile({ [field]: url || null });
+    setSaving(false);
+    if (error) { setStatus("error"); setErrMsg(error); }
+    else setStatus("saved");
+    setTimeout(() => setStatus("idle"), 2000);
+  }
+
+  async function handleTest() {
+    if (!url) return;
+    setTesting(true);
+    setStatus("idle");
+    setErrMsg("");
+    try {
+      const res = await fetch("/api/integrations/test-webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, type: webhookType }),
+      });
+      const data = await res.json();
+      if (res.ok) setStatus("tested");
+      else { setStatus("error"); setErrMsg(data.error ?? "Test failed"); }
+    } catch {
+      setStatus("error");
+      setErrMsg("Could not reach webhook");
+    }
+    setTesting(false);
+    setTimeout(() => setStatus("idle"), 3000);
+  }
+
+  const isConnected = !!saved;
+
+  return (
+    <Card className={isConnected ? "border-emerald-200 dark:border-emerald-500/30" : ""}>
+      <CardContent className="p-5">
+        <div className="flex items-start gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-white/8 flex items-center justify-center text-2xl flex-shrink-0">
+            {icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{name}</p>
+              {isConnected && (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" /> Connected
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mb-3">{desc}</p>
+
+            {!allowed ? (
+              <Button variant="outline" size="sm" onClick={() => window.location.href = "/settings?tab=billing"}>
+                Upgrade to connect
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={placeholder}
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="text-xs font-mono"
+                  />
+                  <Button size="sm" onClick={handleSave} disabled={saving || url === saved}>
+                    {saving ? "Saving..." : "Save"}
+                  </Button>
+                  {saved && (
+                    <Button size="sm" variant="outline" onClick={handleTest} disabled={testing}>
+                      {testing ? "Testing..." : "Test"}
+                    </Button>
+                  )}
+                </div>
+                {status === "saved" && <p className="text-xs text-emerald-500">✓ Saved</p>}
+                {status === "tested" && <p className="text-xs text-emerald-500">✓ Test message sent — check your {name}!</p>}
+                {status === "error" && <p className="text-xs text-red-400">{errMsg}</p>}
+                <a href={helpUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-500 hover:underline">
+                  {helpText} →
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

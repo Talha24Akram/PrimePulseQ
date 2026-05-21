@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
+import { notifyWebhooks } from "@/lib/webhooks";
 
 // This route is called by Vercel Cron daily.
 // It finds all active surveys whose frequency matches today's schedule
@@ -58,10 +59,10 @@ export async function GET(request: NextRequest) {
   let totalSent = 0;
 
   for (const survey of surveys) {
-    // Fetch workspace profile
+    // Fetch workspace profile (including webhook URLs)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, company_name")
+      .select("full_name, company_name, slack_webhook_url, teams_webhook_url")
       .eq("id", survey.workspace_id)
       .single();
 
@@ -96,6 +97,18 @@ export async function GET(request: NextRequest) {
 
     const sent = results.filter((r) => r.status === "fulfilled").length;
     totalSent += sent;
+
+    // Post to Slack / Teams
+    await notifyWebhooks(
+      (profile as { slack_webhook_url?: string })?.slack_webhook_url,
+      (profile as { teams_webhook_url?: string })?.teams_webhook_url,
+      {
+        title: `📋 Pulse survey: ${survey.title}`,
+        text: `Your ${survey.frequency} pulse survey is now live. ${sent} team member${sent !== 1 ? "s" : ""} have been invited.`,
+        surveyUrl: `${appUrl}/s/${survey.id}`,
+        companyName,
+      }
+    );
 
     // Log in audit_logs
     await supabase.from("audit_logs").insert({

@@ -16,6 +16,8 @@ export interface Profile {
   subscription_status: string;
   trial_ends_at: string | null;
   paddle_customer_id: string | null;
+  slack_webhook_url: string | null;
+  teams_webhook_url: string | null;
   created_at: string;
 }
 
