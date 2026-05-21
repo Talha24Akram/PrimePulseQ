@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useProfile } from "@/hooks/useProfile";
 import { TierGate } from "@/components/tier-gate";
 import {
@@ -37,6 +38,7 @@ function startOfWeek(date: Date): Date {
 
 export default function AnalyticsPage() {
   const { profile } = useProfile();
+  const router = useRouter();
   const tier = profile?.subscription_tier ?? "free";
   const isOwner = profile?.is_owner ?? false;
   const [period, setPeriod] = useState<"4w" | "8w" | "12w">("8w");
@@ -548,19 +550,29 @@ export default function AnalyticsPage() {
                           </p>
                         </div>
                       )}
-                      {[
-                        avgResponseRate < 50 && "Response rate is low — consider sending a reminder to employees.",
-                        currentScore < 60 && "Engagement is below 60%. A team retro or anonymous Q&A may help surface issues.",
-                        enps < 0 && "Negative eNPS indicates detractors outweigh promoters. Investigate recurring pain points.",
-                        currentScore >= 75 && "Great engagement! Keep the momentum with consistent pulse checks.",
-                      ].filter(Boolean).map((tip, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20">
-                          <div className="h-5 w-5 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                            {i + 1}
+                      {(
+                        [
+                          avgResponseRate < 50 && { tip: "Response rate is low — send a reminder to employees.", action: "Go to surveys →", href: "/surveys" },
+                          currentScore < 60 && { tip: "Engagement is below 60%. Create a new pulse survey to dig deeper.", action: "Create survey →", href: "/surveys/new" },
+                          enps < 0 && { tip: "Negative eNPS — detractors outweigh promoters. Review your employee list for disengaged team members.", action: "View employees →", href: "/employees" },
+                          currentScore >= 75 && { tip: "Great engagement! Keep the momentum with consistent pulse checks.", action: "Create survey →", href: "/surveys/new" },
+                        ] as (false | { tip: string; action: string; href: string })[]
+                      ).filter(Boolean).map((item, i) => {
+                        const { tip, action, href } = item as { tip: string; action: string; href: string };
+                        return (
+                          <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20">
+                            <div className="h-5 w-5 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                              {i + 1}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm text-violet-900 dark:text-violet-300">{tip}</p>
+                              <button onClick={() => router.push(href)} className="text-xs text-violet-600 dark:text-violet-400 font-medium mt-1 hover:underline">
+                                {action}
+                              </button>
+                            </div>
                           </div>
-                          <p className="text-sm text-violet-900 dark:text-violet-300">{tip as string}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </CardContent>
                   </Card>
                 </div>

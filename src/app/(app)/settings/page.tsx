@@ -28,12 +28,25 @@ function SettingsInner() {
   const { theme, setTheme } = useTheme();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [company, setCompany] = useState({ name: "", slug: "", website: "" });
-  const [notifications, setNotifications] = useState({
-    new_responses: true,
-    weekly_summary: true,
-    burnout_alerts: true,
-    low_response_rate: false,
+  const NOTIF_KEY = "ppq_notification_prefs";
+  const [notifications, setNotifications] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(NOTIF_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return { new_responses: true, weekly_summary: true, burnout_alerts: true, low_response_rate: false };
   });
+  const [notifSaved, setNotifSaved] = useState(false);
+
+  function updateNotif(key: string, value: boolean) {
+    const next = { ...notifications, [key]: value };
+    setNotifications(next);
+    localStorage.setItem(NOTIF_KEY, JSON.stringify(next));
+    setNotifSaved(true);
+    setTimeout(() => setNotifSaved(false), 1500);
+  }
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -188,8 +201,17 @@ function SettingsInner() {
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Email Notifications</CardTitle>
-              <CardDescription>Choose when you get notified by email.</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Email Notifications</CardTitle>
+                  <CardDescription>Choose when you get notified by email.</CardDescription>
+                </div>
+                {notifSaved && (
+                  <span className="text-xs text-emerald-500 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Saved
+                  </span>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-0">
               {[
@@ -202,12 +224,12 @@ function SettingsInner() {
                   {i > 0 && <Separator className="my-4" />}
                   <div className="flex items-center justify-between py-2">
                     <div>
-                      <p className="text-sm font-medium text-gray-100">{item.label}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.label}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
                     </div>
                     <Switch
                       checked={notifications[item.key as keyof typeof notifications]}
-                      onCheckedChange={(v) => setNotifications((p) => ({ ...p, [item.key]: v }))}
+                      onCheckedChange={(v) => updateNotif(item.key, v)}
                     />
                   </div>
                 </div>
