@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useProfile, type Profile } from "@/hooks/useProfile";
 import { createClient } from "@/lib/supabase/client";
 import { TierGate } from "@/components/tier-gate";
-import { TIER_LABELS, canAccess } from "@/lib/tiers";
+import { TIER_LABELS, canAccess, type Tier } from "@/lib/tiers";
 
 export default function SettingsPage() {
   return (
@@ -478,7 +478,7 @@ function IntegrationCard({
   helpUrl: string; helpText: string; webhookType: "slack" | "teams";
   profile: Profile | null;
   updateProfile: (data: Partial<Profile>) => Promise<{ error: string | null }>;
-  tier: string; isOwner: boolean; feature: "slack_integration" | "teams_integration";
+  tier: Tier; isOwner: boolean; feature: "slack_integration" | "teams_integration";
 }) {
   const allowed = canAccess(feature, tier, isOwner);
   const saved = (profile?.[field as keyof typeof profile] as string) ?? "";
