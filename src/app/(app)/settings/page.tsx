@@ -395,18 +395,6 @@ function SettingsInner() {
                 feature: "teams_integration" as const,
                 icon: "🟦",
               },
-              {
-                name: "BambooHR",
-                desc: "Automatically sync employee roster from BambooHR.",
-                feature: "hris_integrations" as const,
-                icon: "🎋",
-              },
-              {
-                name: "Workday",
-                desc: "Sync employee data and org structure from Workday.",
-                feature: "hris_integrations" as const,
-                icon: "⚙️",
-              },
             ].map((integration) => {
               const allowed = canAccess(integration.feature, tier, isOwner);
               return (
