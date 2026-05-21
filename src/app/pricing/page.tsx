@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { CheckCircle2, MessageSquare, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { PublicNav } from "@/components/public-nav";
 
 const tiers = [
   {
@@ -108,23 +108,9 @@ const faqs = [
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-gray-200 dark:border-white/8 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="PrimePulseQ" className="h-8 w-8 object-contain" />
-            <span className="font-bold text-gray-900 dark:text-white text-lg">PrimePulseQ</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link href="/login" className="hidden sm:block"><Button variant="ghost" size="sm">Sign in</Button></Link>
-            <Link href="/signup"><Button size="sm">Get started</Button></Link>
-          </div>
-        </div>
-      </nav>
-
+      <PublicNav />
       {/* Header */}
-      <section className="pt-12 sm:pt-20 pb-10 sm:pb-16 px-4 sm:px-6 text-center">
+      <section className="pt-24 sm:pt-28 pb-10 sm:pb-16 px-4 sm:px-6 text-center">
         <h1 className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-4">Simple, honest pricing</h1>
         <p className="text-base sm:text-xl text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
           No per-seat traps. No surprise enterprise add-ons. Pay for what you actually use.

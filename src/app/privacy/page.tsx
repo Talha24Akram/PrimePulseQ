@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { MessageSquare, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { PublicNav } from "@/components/public-nav";
 
 const EFFECTIVE_DATE = "May 16, 2026";
 const LAST_UPDATED = "May 16, 2026";
@@ -58,22 +58,8 @@ const toc = [
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-gray-200 dark:border-white/8 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-6 flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="PrimePulseQ" className="h-8 w-8 object-contain" />
-            <span className="font-bold text-gray-900 dark:text-white text-lg">{COMPANY_NAME}</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link href="/login"><Button variant="ghost" size="sm">Sign in</Button></Link>
-            <Link href="/signup"><Button size="sm">Get started free</Button></Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="mx-auto max-w-7xl px-6 py-12">
+      <PublicNav />
+      <div className="mx-auto max-w-7xl px-6 py-12 pt-24">
         {/* Back link */}
         <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-8 transition-colors">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to home
