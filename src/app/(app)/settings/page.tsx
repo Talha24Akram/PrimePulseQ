@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, type Profile } from "@/hooks/useProfile";
 import { createClient } from "@/lib/supabase/client";
 import { TierGate } from "@/components/tier-gate";
 import { TIER_LABELS, canAccess } from "@/lib/tiers";
@@ -476,12 +476,12 @@ function IntegrationCard({
 }: {
   icon: string; name: string; desc: string; field: string; placeholder: string;
   helpUrl: string; helpText: string; webhookType: "slack" | "teams";
-  profile: { [key: string]: unknown } | null;
-  updateProfile: (data: Record<string, unknown>) => Promise<{ error: string | null }>;
+  profile: Profile | null;
+  updateProfile: (data: Partial<Profile>) => Promise<{ error: string | null }>;
   tier: string; isOwner: boolean; feature: "slack_integration" | "teams_integration";
 }) {
   const allowed = canAccess(feature, tier, isOwner);
-  const saved = (profile?.[field] as string) ?? "";
+  const saved = (profile?.[field as keyof typeof profile] as string) ?? "";
   const [url, setUrl] = useState(saved);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -494,7 +494,7 @@ function IntegrationCard({
   async function handleSave() {
     setSaving(true);
     setStatus("idle");
-    const { error } = await updateProfile({ [field]: url || null });
+    const { error } = await updateProfile({ [field]: url || null } as Partial<Profile>);
     setSaving(false);
     if (error) { setStatus("error"); setErrMsg(error); }
     else setStatus("saved");
