@@ -298,8 +298,11 @@ function SettingsInner() {
               {tier === "free" && (
                 <>
                   <p className="text-sm text-gray-500 mb-4">You&apos;re on the free plan. Upgrade to unlock surveys, analytics, and more.</p>
-                  <Button className="w-full mb-2">Upgrade to Starter — $49/mo</Button>
+                  <a href="mailto:billing@primepulseq.com?subject=Upgrade to Starter Plan" className="block">
+                    <Button className="w-full mb-2">Upgrade to Starter — $49/mo</Button>
+                  </a>
                   <p className="text-xs text-gray-400 text-center">Up to 100 employees · Weekly surveys · Basic analytics</p>
+                  <p className="text-xs text-gray-400 text-center mt-1">You&apos;ll be redirected to our billing team to complete the upgrade.</p>
                 </>
               )}
               {tier === "starter" && (
@@ -315,7 +318,9 @@ function SettingsInner() {
                       </div>
                     ))}
                   </div>
-                  <Button className="w-full">Upgrade to Growth — $149/mo</Button>
+                  <a href="mailto:billing@primepulseq.com?subject=Upgrade to Growth Plan" className="block">
+                    <Button className="w-full">Upgrade to Growth — $149/mo</Button>
+                  </a>
                   <p className="text-xs text-gray-400 text-center mt-2">Up to 500 employees · Slack, burnout detection, advanced analytics</p>
                 </>
               )}
@@ -332,7 +337,9 @@ function SettingsInner() {
                       </div>
                     ))}
                   </div>
-                  <Button className="w-full">Upgrade to Enterprise — $499/mo</Button>
+                  <a href="mailto:billing@primepulseq.com?subject=Upgrade to Enterprise Plan" className="block">
+                    <Button className="w-full">Upgrade to Enterprise — $499/mo</Button>
+                  </a>
                   <p className="text-xs text-gray-400 text-center mt-2">Unlimited employees · SSO · HRIS integrations · API access</p>
                 </>
               )}
@@ -357,23 +364,26 @@ function SettingsInner() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Billing Details</CardTitle>
+              <CardDescription>To update your payment method or view invoices, contact our billing team.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-12 rounded bg-gray-700 flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">VISA</span>
+                  <div className="h-8 w-8 rounded-lg bg-gray-200 dark:bg-white/10 flex items-center justify-center">
+                    <CreditCard className="h-4 w-4 text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-100">•••• •••• •••• 4242</p>
-                    <p className="text-xs text-gray-500">Expires 12/27</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No payment method on file</p>
+                    <p className="text-xs text-gray-500">Added automatically when you upgrade</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">Update</Button>
+                <a href="mailto:billing@primepulseq.com?subject=Update Payment Method">
+                  <Button variant="outline" size="sm">Contact billing</Button>
+                </a>
               </div>
               <p className="text-xs text-gray-400 flex items-center gap-1.5">
                 <Shield className="h-3 w-3" />
-                Payments are secured by Paddle. We never store card details.
+                Payments are secured by Stripe. We never store card details.
               </p>
             </CardContent>
           </Card>

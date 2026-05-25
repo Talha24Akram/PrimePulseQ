@@ -286,15 +286,15 @@ export default function NewSurveyPage() {
 
                   {/* Scale preview */}
                   {question.type === "scale" && (
-                    <div className="ml-0 sm:ml-9 p-3 rounded-lg bg-white/5 border border-white/10">
-                      <div className="flex gap-1 overflow-x-auto pb-1">
+                    <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
                         {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-                          <div key={n} className="flex-shrink-0 h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center text-xs text-gray-400">
+                          <div key={n} className="h-9 rounded-lg bg-white/10 flex items-center justify-center text-xs text-gray-400 font-medium">
                             {n}
                           </div>
                         ))}
                       </div>
-                      <div className="flex justify-between mt-1.5 text-xs text-gray-500">
+                      <div className="flex justify-between mt-2 text-xs text-gray-500">
                         <span>1 — Not at all</span>
                         <span>10 — Excellent</span>
                       </div>
@@ -303,7 +303,7 @@ export default function NewSurveyPage() {
 
                   {/* Multiple choice options */}
                   {question.type === "multiple_choice" && (
-                    <div className="ml-0 sm:ml-9 space-y-2">
+                    <div className="space-y-2">
                       {question.options.map((option, optIndex) => (
                         <div key={optIndex} className="flex items-center gap-2">
                           <div className="h-4 w-4 rounded-full border-2 border-white/20 flex-shrink-0" />
@@ -337,7 +337,7 @@ export default function NewSurveyPage() {
 
                   {/* Yes/No preview */}
                   {question.type === "yes_no" && (
-                    <div className="ml-0 sm:ml-9 flex gap-3">
+                    <div className="flex gap-3">
                       {["Yes", "No"].map((opt) => (
                         <div key={opt} className="px-6 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-gray-400">
                           {opt}
