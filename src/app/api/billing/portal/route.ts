@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { stripe } from "@/lib/stripe";
+import { paddle } from "@/lib/paddle";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,19 +29,21 @@ export async function POST(request: NextRequest) {
 
     const customerId = profile?.paddle_customer_id as string | null;
     if (!customerId) {
-      return NextResponse.json({ error: "No billing account found. Please subscribe first." }, { status: 400 });
+      return NextResponse.json(
+        { error: "No billing account found. Please subscribe first." },
+        { status: 400 }
+      );
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://primepulseq.vercel.app";
+    // Generate a short-lived auth token for the Paddle Customer Portal
+    const authToken = await paddle.customers.generateAuthToken(customerId);
 
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${appUrl}/settings?tab=billing`,
-    });
+    // Paddle Customer Portal URL
+    const portalUrl = `https://customer.paddle.com/?token=${authToken.customerAuthToken}`;
 
-    return NextResponse.json({ url: portalSession.url });
+    return NextResponse.json({ url: portalUrl });
   } catch (err) {
-    console.error("portal error:", err);
+    console.error("Paddle portal error:", err);
     return NextResponse.json({ error: "Failed to open billing portal" }, { status: 500 });
   }
 }

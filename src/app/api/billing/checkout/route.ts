@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { stripe, getPriceIdFromTier } from "@/lib/stripe";
+import { paddle, getPriceIdFromTier } from "@/lib/paddle";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Fetch profile to check for existing Stripe customer ID
+    // Fetch profile (check for existing Paddle customer ID)
     const { data: profile } = await supabase
       .from("profiles")
       .select("paddle_customer_id, email, full_name, company_name")
@@ -37,47 +37,41 @@ export async function POST(request: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://primepulseq.vercel.app";
 
-    // Get or create Stripe customer
+    // Get or create Paddle customer
     let customerId = profile?.paddle_customer_id as string | null;
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await paddle.customers.create({
         email: user.email!,
         name: profile?.company_name ?? profile?.full_name ?? undefined,
-        metadata: { supabase_user_id: user.id },
+        customData: { supabase_user_id: user.id },
       });
       customerId = customer.id;
 
-      // Store immediately so the webhook can look them up
+      // Store immediately so webhooks can look the user up by customer ID
       await supabase
         .from("profiles")
         .update({ paddle_customer_id: customerId })
         .eq("id", user.id);
     }
 
-    // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/settings?tab=billing`,
-      allow_promotion_codes: true,
-      billing_address_collection: "auto",
-      metadata: {
-        supabase_user_id: user.id,
-        tier,
-      },
-      subscription_data: {
-        metadata: {
-          supabase_user_id: user.id,
-          tier,
-        },
+    // Create Paddle transaction → generates a hosted checkout URL
+    const transaction = await paddle.transactions.create({
+      items: [{ priceId, quantity: 1 }],
+      customerId,
+      customData: { supabase_user_id: user.id, tier },
+      checkout: {
+        url: `${appUrl}/billing/success`,
       },
     });
 
-    return NextResponse.json({ url: session.url });
+    const checkoutUrl = transaction.checkout?.url;
+    if (!checkoutUrl) {
+      return NextResponse.json({ error: "Paddle did not return a checkout URL" }, { status: 500 });
+    }
+
+    return NextResponse.json({ url: checkoutUrl });
   } catch (err) {
-    console.error("checkout error:", err);
+    console.error("Paddle checkout error:", err);
     return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 });
   }
 }
