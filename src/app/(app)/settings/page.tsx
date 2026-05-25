@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useTheme } from "next-themes";
 import { useSearchParams } from "next/navigation";
-import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2, Sun, Moon, ClipboardList } from "lucide-react";
+import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2, Sun, Moon, ClipboardList, ExternalLink, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -287,106 +287,7 @@ function SettingsInner() {
 
         {/* Billing */}
         <TabsContent value="billing">
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Current Plan</CardTitle>
-                <Badge>{isOwner ? "Owner (Enterprise)" : TIER_LABELS[tier]}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {tier === "free" && (
-                <>
-                  <p className="text-sm text-gray-500 mb-4">You&apos;re on the free plan. Upgrade to unlock surveys, analytics, and more.</p>
-                  <a href="mailto:billing@primepulseq.com?subject=Upgrade to Starter Plan" className="block">
-                    <Button className="w-full mb-2">Upgrade to Starter — $49/mo</Button>
-                  </a>
-                  <p className="text-xs text-gray-400 text-center">Up to 100 employees · Weekly surveys · Basic analytics</p>
-                  <p className="text-xs text-gray-400 text-center mt-1">You&apos;ll be redirected to our billing team to complete the upgrade.</p>
-                </>
-              )}
-              {tier === "starter" && (
-                <>
-                  <div className="flex items-end gap-1 mb-4">
-                    <span className="text-4xl font-bold text-gray-900 dark:text-white">$49</span>
-                    <span className="text-gray-500 text-sm mb-1">/month</span>
-                  </div>
-                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-6">
-                    {["Up to 100 employees", "Weekly pulse surveys", "Basic analytics", "Email support"].map((f) => (
-                      <div key={f} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-violet-600" />{f}
-                      </div>
-                    ))}
-                  </div>
-                  <a href="mailto:billing@primepulseq.com?subject=Upgrade to Growth Plan" className="block">
-                    <Button className="w-full">Upgrade to Growth — $149/mo</Button>
-                  </a>
-                  <p className="text-xs text-gray-400 text-center mt-2">Up to 500 employees · Slack, burnout detection, advanced analytics</p>
-                </>
-              )}
-              {tier === "growth" && (
-                <>
-                  <div className="flex items-end gap-1 mb-4">
-                    <span className="text-4xl font-bold text-gray-900 dark:text-white">$149</span>
-                    <span className="text-gray-500 text-sm mb-1">/month</span>
-                  </div>
-                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-6">
-                    {["Up to 500 employees", "Slack & Teams integration", "Advanced analytics", "Burnout detection"].map((f) => (
-                      <div key={f} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-violet-600" />{f}
-                      </div>
-                    ))}
-                  </div>
-                  <a href="mailto:billing@primepulseq.com?subject=Upgrade to Enterprise Plan" className="block">
-                    <Button className="w-full">Upgrade to Enterprise — $499/mo</Button>
-                  </a>
-                  <p className="text-xs text-gray-400 text-center mt-2">Unlimited employees · SSO · HRIS integrations · API access</p>
-                </>
-              )}
-              {(tier === "enterprise" || isOwner) && (
-                <>
-                  <div className="flex items-end gap-1 mb-4">
-                    <span className="text-4xl font-bold text-gray-900 dark:text-white">{isOwner ? "Owner" : "$499"}</span>
-                    {!isOwner && <span className="text-gray-500 text-sm mb-1">/month</span>}
-                  </div>
-                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                    {["Unlimited employees", "SSO / SAML", "HRIS integrations", "API access", "Audit logs", "Executive reports"].map((f) => (
-                      <div key={f} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />{f}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Billing Details</CardTitle>
-              <CardDescription>To update your payment method or view invoices, contact our billing team.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-gray-200 dark:bg-white/10 flex items-center justify-center">
-                    <CreditCard className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No payment method on file</p>
-                    <p className="text-xs text-gray-500">Added automatically when you upgrade</p>
-                  </div>
-                </div>
-                <a href="mailto:billing@primepulseq.com?subject=Update Payment Method">
-                  <Button variant="outline" size="sm">Contact billing</Button>
-                </a>
-              </div>
-              <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                <Shield className="h-3 w-3" />
-                Payments are secured by Stripe. We never store card details.
-              </p>
-            </CardContent>
-          </Card>
+          <BillingTab tier={tier} isOwner={isOwner} profile={profile} />
         </TabsContent>
 
         {/* Integrations */}
@@ -475,6 +376,196 @@ function SettingsInner() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ── Billing Tab ──────────────────────────────────────────────────────────────
+const PLANS = [
+  {
+    tier: "starter" as const,
+    name: "Starter",
+    price: "$49",
+    features: ["Up to 100 employees", "Weekly pulse surveys", "Basic analytics", "Email support"],
+  },
+  {
+    tier: "growth" as const,
+    name: "Growth",
+    price: "$149",
+    features: ["Up to 500 employees", "Slack & Teams integration", "Advanced analytics", "Burnout detection"],
+  },
+  {
+    tier: "enterprise" as const,
+    name: "Enterprise",
+    price: "$499",
+    features: ["Unlimited employees", "SSO / SAML", "HRIS integrations", "API access", "Audit logs"],
+  },
+];
+
+function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; profile: Profile | null }) {
+  const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const [billingError, setBillingError] = useState("");
+
+  const hasPaidPlan = tier !== "free" || isOwner;
+  const currentPlanIndex = PLANS.findIndex((p) => p.tier === tier);
+
+  async function handleUpgrade(targetTier: string) {
+    setUpgrading(targetTier);
+    setBillingError("");
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: targetTier }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setBillingError(data.error ?? "Could not start checkout. Please try again.");
+      }
+    } catch {
+      setBillingError("Network error. Please check your connection and try again.");
+    }
+    setUpgrading(null);
+  }
+
+  async function handlePortal() {
+    setOpeningPortal(true);
+    setBillingError("");
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setBillingError(data.error ?? "Could not open billing portal.");
+      }
+    } catch {
+      setBillingError("Network error. Please try again.");
+    }
+    setOpeningPortal(false);
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Current plan */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <CardTitle className="text-base">Current Plan</CardTitle>
+              <CardDescription>
+                {isOwner ? "Owner account — all features unlocked." : `You are on the ${TIER_LABELS[tier]} plan.`}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={hasPaidPlan ? "default" : "secondary"}>
+                {isOwner ? "Owner" : TIER_LABELS[tier]}
+              </Badge>
+              {profile?.subscription_status && profile.subscription_status !== "active" && !isOwner && (
+                <Badge variant="destructive" className="text-xs capitalize">{profile.subscription_status}</Badge>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        {hasPaidPlan && !isOwner && (
+          <CardContent>
+            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-5">
+              {PLANS.find((p) => p.tier === tier)?.features.map((f) => (
+                <div key={f} className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />{f}
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handlePortal}
+              disabled={openingPortal}
+            >
+              {openingPortal ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+              {openingPortal ? "Opening portal…" : "Manage subscription"}
+            </Button>
+            <p className="text-xs text-gray-400 mt-2">
+              Update payment method, view invoices, or cancel — all via Stripe&apos;s secure portal.
+            </p>
+          </CardContent>
+        )}
+        {isOwner && (
+          <CardContent>
+            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+              {["Unlimited employees", "All features enabled", "Audit logs", "API access"].map((f) => (
+                <div key={f} className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />{f}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Error */}
+      {billingError && (
+        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-sm text-red-600 dark:text-red-400">
+          {billingError}
+        </div>
+      )}
+
+      {/* Upgrade options (only show plans higher than current) */}
+      {!isOwner && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {tier === "free" ? "Choose a plan" : "Upgrade your plan"}
+          </h3>
+          {PLANS.filter((_, i) => i > currentPlanIndex).map((plan) => (
+            <Card key={plan.tier} className={plan.tier === "growth" ? "border-violet-400 dark:border-violet-500/50 shadow-sm" : ""}>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-gray-900 dark:text-white">{plan.name}</p>
+                      {plan.tier === "growth" && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30">
+                          Popular
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                      {plan.price}<span className="text-sm font-normal text-gray-400">/mo</span>
+                    </p>
+                    <div className="space-y-1">
+                      {plan.features.map((f) => (
+                        <div key={f} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />{f}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Button
+                    className="gap-2 flex-shrink-0"
+                    onClick={() => handleUpgrade(plan.tier)}
+                    disabled={!!upgrading}
+                  >
+                    {upgrading === plan.tier ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" />Redirecting…</>
+                    ) : (
+                      <>Upgrade <ArrowRight className="h-4 w-4" /></>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Security note */}
+      <p className="text-xs text-gray-400 flex items-center gap-1.5">
+        <Shield className="h-3 w-3 flex-shrink-0" />
+        Payments are processed securely by Stripe. We never store card details.
+      </p>
     </div>
   );
 }
