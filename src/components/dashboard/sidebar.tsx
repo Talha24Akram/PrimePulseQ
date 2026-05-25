@@ -35,10 +35,13 @@ export function Sidebar() {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-white border-gray-200 dark:bg-gray-900 dark:border-white/5 flex-shrink-0">
-        <div className="flex h-16 items-center gap-2.5 px-6 border-b border-gray-200 dark:border-white/5">
+        <Link
+          href="/dashboard"
+          className="flex h-16 items-center gap-2.5 px-6 border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/3 transition-colors"
+        >
           <img src="/logo.png" alt="PrimePulseQ" className="h-8 w-8 object-contain" />
           <span className="font-bold text-gray-900 dark:text-white tracking-tight">PrimePulseQ</span>
-        </div>
+        </Link>
 
         <nav className="flex-1 p-4 space-y-0.5">
           {navItems.map((item) => {
@@ -77,13 +80,22 @@ export function Sidebar() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/5 flex items-center px-4 gap-3">
-        <img src="/logo.png" alt="PrimePulseQ" className="h-7 w-7 object-contain" />
-        <span className="font-bold text-gray-900 dark:text-white text-base">PrimePulseQ</span>
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/5 flex items-center justify-between px-4">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <img src="/logo.png" alt="PrimePulseQ" className="h-7 w-7 object-contain" />
+          <span className="font-bold text-gray-900 dark:text-white text-base">PrimePulseQ</span>
+        </Link>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sign out
+        </button>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-white/5 flex items-center justify-around px-2 h-16 safe-area-pb">
+      {/* Mobile bottom nav — 5 items only */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-white/5 flex items-center justify-around px-1 h-16">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -91,24 +103,17 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all flex-1",
+                "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-all flex-1 min-w-0",
                 isActive
                   ? "text-violet-600 dark:text-violet-400"
                   : "text-gray-400 dark:text-gray-500"
               )}
             >
-              <item.icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{item.label}</span>
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <span className="text-xs font-medium truncate">{item.label}</span>
             </Link>
           );
         })}
-        <button
-          onClick={handleLogout}
-          className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all flex-1 text-gray-400 dark:text-gray-500"
-        >
-          <LogOut className="h-5 w-5" />
-          <span className="text-xs font-medium">Sign out</span>
-        </button>
       </nav>
     </>
   );

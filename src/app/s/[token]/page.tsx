@@ -50,7 +50,7 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
         .single();
 
       if (error || !surveyData) { setNotFound(true); setLoading(false); return; }
-      if (surveyData.status === "closed") { setClosed(true); setLoading(false); return; }
+      if (surveyData.status !== "active") { setClosed(true); setLoading(false); return; }
 
       // Load questions
       const { data: questions } = await supabase
@@ -130,9 +130,12 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
   if (closed) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Survey closed</h1>
-          <p className="text-gray-500">This survey is no longer accepting responses.</p>
+        <div className="text-center max-w-sm">
+          <div className="h-16 w-16 rounded-2xl bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">🔒</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Survey not available</h1>
+          <p className="text-gray-500">This survey is not currently accepting responses. It may have closed or is not yet published.</p>
         </div>
       </div>
     );

@@ -90,6 +90,8 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
     setSurvey((prev) => prev ? { ...prev, status: "active" } : prev);
     await logAudit("survey.activated", { resourceType: "survey", resourceId: id });
     setActivating(false);
+    // Prompt to send emails immediately
+    setTimeout(() => openEmailModal(), 400);
   }
 
   async function closeSurvey() {
@@ -248,16 +250,25 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Share link */}
       <Card className="mb-6 sm:mb-8 border-violet-300 bg-violet-50 dark:border-violet-500/20 dark:bg-violet-500/5">
-        <CardContent className="p-4 sm:p-5 flex items-center gap-4 flex-wrap">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Anonymous survey link</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 truncate">
-              {surveyUrl}
-            </p>
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">Anonymous survey link</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Share this link with employees — no login required. Responses are 100% anonymous.</p>
+            </div>
+            <Button variant="outline" onClick={copyLink} className="flex-shrink-0">
+              {copied ? "Copied!" : "Copy link"}
+            </Button>
           </div>
-          <Button variant="outline" onClick={copyLink} className="flex-shrink-0">
-            {copied ? "Copied!" : "Copy"}
-          </Button>
+          <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 truncate">
+            {surveyUrl}
+          </p>
+          {survey.status === "draft" && (
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">⚠ Activate this survey first — employees can&apos;t respond while it&apos;s a draft.</p>
+          )}
+          {survey.status === "active" && (
+            <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">✓ Survey is live — employees can respond via this link or by email invitation below.</p>
+          )}
         </CardContent>
       </Card>
 

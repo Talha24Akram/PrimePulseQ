@@ -90,6 +90,23 @@ export default function EmployeesPage() {
       setAddError(error.message.includes("unique") ? "This email is already added." : error.message);
     } else {
       await logAudit("employee.added", { resourceType: "employee", metadata: { email: newEmployee.email } });
+
+      // Send welcome / confirmation email (fire and forget — don't block on failure)
+      try {
+        await fetch("/api/employees/invite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employeeEmail: newEmployee.email,
+            employeeName: newEmployee.name || null,
+            companyName: profile?.company_name ?? profile?.full_name ?? undefined,
+            adminEmail: profile?.email ?? undefined,
+          }),
+        });
+      } catch {
+        // ignore — email failure should not block adding the employee
+      }
+
       setShowAdd(false);
       setNewEmployee({ name: "", email: "", department: "", role: "" });
       await loadEmployees();

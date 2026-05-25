@@ -157,9 +157,9 @@ export default function NewSurveyPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center gap-4 mb-6 sm:mb-8">
         <Link href="/surveys">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
@@ -257,12 +257,12 @@ export default function NewSurveyPage() {
                         value={question.text}
                         onChange={(e) => updateQuestion(question.id, { text: e.target.value })}
                       />
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <Select
                           value={question.type}
                           onValueChange={(v) => updateQuestion(question.id, { type: v as QuestionType, options: [] })}
                         >
-                          <SelectTrigger className="w-48">
+                          <SelectTrigger className="w-40 sm:w-48">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -286,24 +286,24 @@ export default function NewSurveyPage() {
 
                   {/* Scale preview */}
                   {question.type === "scale" && (
-                    <div className="ml-9 p-3 rounded-lg bg-white/5 border border-white/10">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-500">1 (Poor)</span>
-                        <div className="flex gap-1">
-                          {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-                            <div key={n} className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-xs text-gray-400">
-                              {n}
-                            </div>
-                          ))}
-                        </div>
-                        <span className="text-xs text-gray-500">10 (Excellent)</span>
+                    <div className="ml-0 sm:ml-9 p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex gap-1 overflow-x-auto pb-1">
+                        {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+                          <div key={n} className="flex-shrink-0 h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center text-xs text-gray-400">
+                            {n}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-between mt-1.5 text-xs text-gray-500">
+                        <span>1 — Not at all</span>
+                        <span>10 — Excellent</span>
                       </div>
                     </div>
                   )}
 
                   {/* Multiple choice options */}
                   {question.type === "multiple_choice" && (
-                    <div className="ml-9 space-y-2">
+                    <div className="ml-0 sm:ml-9 space-y-2">
                       {question.options.map((option, optIndex) => (
                         <div key={optIndex} className="flex items-center gap-2">
                           <div className="h-4 w-4 rounded-full border-2 border-white/20 flex-shrink-0" />
@@ -337,7 +337,7 @@ export default function NewSurveyPage() {
 
                   {/* Yes/No preview */}
                   {question.type === "yes_no" && (
-                    <div className="ml-9 flex gap-3">
+                    <div className="ml-0 sm:ml-9 flex gap-3">
                       {["Yes", "No"].map((opt) => (
                         <div key={opt} className="px-6 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-gray-400">
                           {opt}
@@ -368,15 +368,15 @@ export default function NewSurveyPage() {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-4 border-t border-white/8">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-white/8">
         <Link href="/surveys">
-          <Button variant="ghost">Cancel</Button>
+          <Button variant="ghost" className="w-full sm:w-auto">Cancel</Button>
         </Link>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => handleSave("draft")} disabled={saving}>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Button variant="outline" onClick={() => handleSave("draft")} disabled={saving} className="w-full sm:w-auto">
             Save as draft
           </Button>
-          <Button onClick={() => handleSave("active")} disabled={saving || !title || questions.every((q) => !q.text)}>
+          <Button onClick={() => handleSave("active")} disabled={saving || !title || questions.every((q) => !q.text)} className="w-full sm:w-auto">
             {saving ? "Saving..." : "Publish & send"}
           </Button>
         </div>

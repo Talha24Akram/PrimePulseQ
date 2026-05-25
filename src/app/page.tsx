@@ -1,10 +1,22 @@
+"use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Shield, Zap, BarChart3, CheckCircle2, Users, TrendingUp, Lock } from "lucide-react";
+import { ArrowRight, Shield, Zap, BarChart3, CheckCircle2, Users, TrendingUp, Lock, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LandingPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session);
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Nav */}
@@ -21,12 +33,23 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link href="/login" className="hidden sm:block">
-              <Button variant="ghost" size="sm">Sign in</Button>
-            </Link>
-            <Link href="/signup">
-              <Button size="sm">Get started</Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/dashboard">
+                <Button size="sm" className="gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Go to Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="hidden sm:block">
+                  <Button variant="ghost" size="sm">Sign in</Button>
+                </Link>
+                <Link href="/signup">
+                  <Button size="sm">Get started</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -47,11 +70,20 @@ export default function LandingPage() {
             Know what your employees actually think in 60 seconds — before they leave.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/signup" className="w-full sm:w-auto">
-              <Button size="lg" className="gap-2 px-8 w-full sm:w-auto">
-                Start for free <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/dashboard" className="w-full sm:w-auto">
+                <Button size="lg" className="gap-2 px-8 w-full sm:w-auto">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Go to Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/signup" className="w-full sm:w-auto">
+                <Button size="lg" className="gap-2 px-8 w-full sm:w-auto">
+                  Start for free <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
             <Link href="#how-it-works" className="w-full sm:w-auto">
               <Button size="lg" variant="outline" className="px-8 w-full sm:w-auto">
                 See how it works
