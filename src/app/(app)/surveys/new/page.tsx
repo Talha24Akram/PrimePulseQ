@@ -152,8 +152,35 @@ export default function NewSurveyPage() {
     }
 
     await logAudit("survey.created", { resourceType: "survey", resourceId: survey.id, metadata: { title: title.trim(), status } });
+
+    // If publishing as active, immediately email all active employees
+    if (status === "active") {
+      try {
+        // Fetch all active employees for this workspace
+        const { data: employees } = await supabase
+          .from("employees")
+          .select("id")
+          .eq("workspace_id", user.id)
+          .eq("is_active", true);
+
+        if (employees && employees.length > 0) {
+          await fetch("/api/send-survey", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              surveyId: survey.id,
+              employeeIds: employees.map((e) => e.id),
+            }),
+          });
+        }
+      } catch {
+        // Email failure should not block navigation
+      }
+    }
+
     setSaving(false);
-    router.push("/surveys");
+    // Go to the survey detail page so they can see the link, results, and resend if needed
+    router.push(`/surveys/${survey.id}`);
   }
 
   return (
@@ -377,7 +404,7 @@ export default function NewSurveyPage() {
             Save as draft
           </Button>
           <Button onClick={() => handleSave("active")} disabled={saving || !title || questions.every((q) => !q.text)} className="w-full sm:w-auto">
-            {saving ? "Saving..." : "Publish & send"}
+            {saving ? "Publishing & sending..." : "Publish & send"}
           </Button>
         </div>
       </div>
