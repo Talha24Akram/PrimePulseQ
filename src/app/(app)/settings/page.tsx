@@ -142,17 +142,13 @@ function SettingsInner() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Workspace URL</Label>
-                <div className="flex items-center">
-                  <span className="flex h-10 items-center px-3 text-sm text-gray-500 bg-gray-50 border border-r-0 border-gray-300 rounded-l-lg dark:text-gray-400 dark:bg-white/5 dark:border-white/10">
-                    pulsesurvey.io/
-                  </span>
-                  <Input
-                    value={company.slug}
-                    onChange={(e) => setCompany((p) => ({ ...p, slug: e.target.value }))}
-                    className="rounded-l-none"
-                  />
-                </div>
+                <Label>Workspace identifier <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Input
+                  placeholder="e.g. acme-corp"
+                  value={company.slug}
+                  onChange={(e) => setCompany((p) => ({ ...p, slug: e.target.value }))}
+                />
+                <p className="text-xs text-gray-400">Used to identify your workspace internally.</p>
               </div>
               <div className="space-y-2">
                 <Label>Website <span className="text-gray-400 font-normal">(optional)</span></Label>
@@ -398,7 +394,7 @@ const PLANS = [
     tier: "enterprise" as const,
     name: "Enterprise",
     price: "$499",
-    features: ["Unlimited employees", "SSO / SAML", "HRIS integrations", "API access", "Audit logs"],
+    features: ["Unlimited employees", "All Growth features", "Audit logs", "Priority support"],
   },
 ];
 
@@ -521,7 +517,7 @@ function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; 
         {isOwner && (
           <CardContent className="space-y-5">
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-              {["Unlimited employees", "All features enabled", "Audit logs", "API access"].map((f) => (
+              {["Unlimited employees", "All features enabled", "Audit logs", "Priority support"].map((f) => (
                 <div key={f} className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />{f}
                 </div>

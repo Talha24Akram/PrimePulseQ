@@ -24,21 +24,13 @@ export const TIER_FEATURES = {
   teams_integration:       ['growth', 'enterprise'],
   advanced_analytics:      ['growth', 'enterprise'],
   burnout_detection:       ['growth', 'enterprise'],
-  manager_dashboards:      ['growth', 'enterprise'],
   sentiment_analysis:      ['growth', 'enterprise'],
-  custom_scheduling:       ['growth', 'enterprise'],
   csv_export:              ['growth', 'enterprise'],
   pdf_export:              ['growth', 'enterprise'],
   unlimited_templates:     ['growth', 'enterprise'],
 
   // Enterprise only
-  sso_saml:                ['enterprise'],
   audit_logs:              ['enterprise'],
-  custom_branding:         ['enterprise'],
-  api_access:              ['enterprise'],
-  hris_integrations:       ['enterprise'],
-  multi_company:           ['enterprise'],
-  executive_reports:       ['enterprise'],
 } as const;
 
 export type Feature = keyof typeof TIER_FEATURES;
@@ -83,17 +75,9 @@ export const UPGRADE_MESSAGE: Record<Feature, string> = {
   teams_integration:   'Upgrade to Growth to connect Microsoft Teams.',
   advanced_analytics:  'Upgrade to Growth for advanced analytics.',
   burnout_detection:   'Upgrade to Growth for burnout risk detection.',
-  manager_dashboards:  'Upgrade to Growth for manager dashboards.',
   sentiment_analysis:  'Upgrade to Growth for sentiment analysis.',
-  custom_scheduling:   'Upgrade to Growth for custom scheduling.',
   csv_export:          'Upgrade to Growth to export CSV.',
   pdf_export:          'Upgrade to Growth to export PDF.',
   unlimited_templates: 'Upgrade to Growth for unlimited templates.',
-  sso_saml:            'Upgrade to Enterprise for SSO / SAML.',
   audit_logs:          'Upgrade to Enterprise for audit logs.',
-  custom_branding:     'Upgrade to Enterprise for custom branding.',
-  api_access:          'Upgrade to Enterprise for API access.',
-  hris_integrations:   'Upgrade to Enterprise for HRIS integrations.',
-  multi_company:       'Upgrade to Enterprise for multi-company support.',
-  executive_reports:   'Upgrade to Enterprise for executive reports.',
 };

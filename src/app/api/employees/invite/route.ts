@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
             </p>
           </div>
           <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;">
-            Powered by <strong>PrimePulseQ</strong> · Employee wellbeing, simplified
+            All survey responses are 100% anonymous.
           </p>
         </td></tr>
         <tr><td style="padding-top:24px;text-align:center;">
