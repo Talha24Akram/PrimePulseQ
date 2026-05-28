@@ -385,19 +385,19 @@ const PLANS = [
   {
     tier: "starter" as const,
     name: "Starter",
-    price: "$49",
+    price: "$19",
     features: ["Up to 100 employees", "Weekly pulse surveys", "Basic analytics", "Email support"],
   },
   {
     tier: "growth" as const,
     name: "Growth",
-    price: "$149",
+    price: "$49",
     features: ["Up to 500 employees", "Slack & Teams integration", "Advanced analytics", "Burnout detection"],
   },
   {
     tier: "enterprise" as const,
     name: "Enterprise",
-    price: "$499",
+    price: "$99",
     features: ["Unlimited employees", "SSO / SAML", "HRIS integrations", "API access", "Audit logs"],
   },
 ];
@@ -406,6 +406,10 @@ function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; 
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
   const [billingError, setBillingError] = useState("");
+  const [ownerSwitching, setOwnerSwitching] = useState<string | null>(null);
+  const [ownerTier, setOwnerTier] = useState<Tier>(tier);
+  // Keep ownerTier in sync if profile loads after initial render
+  useEffect(() => { setOwnerTier(tier); }, [tier]);
 
   const hasPaidPlan = tier !== "free" || isOwner;
   const currentPlanIndex = PLANS.findIndex((p) => p.tier === tier);
@@ -429,6 +433,27 @@ function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; 
       setBillingError("Network error. Please check your connection and try again.");
     }
     setUpgrading(null);
+  }
+
+  async function handleOwnerSetTier(targetTier: Tier) {
+    setOwnerSwitching(targetTier);
+    setBillingError("");
+    try {
+      const res = await fetch("/api/billing/set-tier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: targetTier }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setOwnerTier(targetTier);
+      } else {
+        setBillingError(data.error ?? "Failed to switch tier.");
+      }
+    } catch {
+      setBillingError("Network error. Please try again.");
+    }
+    setOwnerSwitching(null);
   }
 
   async function handlePortal() {
@@ -494,13 +519,45 @@ function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; 
           </CardContent>
         )}
         {isOwner && (
-          <CardContent>
+          <CardContent className="space-y-5">
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
               {["Unlimited employees", "All features enabled", "Audit logs", "API access"].map((f) => (
                 <div key={f} className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />{f}
                 </div>
               ))}
+            </div>
+
+            {/* Owner tier switcher */}
+            <div className="pt-2 border-t border-white/10">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Simulate tier</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {(["free", "starter", "growth", "enterprise"] as Tier[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => handleOwnerSetTier(t)}
+                    disabled={ownerSwitching !== null || ownerTier === t}
+                    className={`relative px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                      ownerTier === t
+                        ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                        : "border-white/10 bg-white/5 text-gray-400 hover:border-violet-500/40 hover:text-gray-200"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {ownerSwitching === t ? (
+                      <span className="flex items-center justify-center gap-1.5">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="capitalize">{t}</span>
+                      </span>
+                    ) : (
+                      <span className="capitalize">{t}</span>
+                    )}
+                    {ownerTier === t && (
+                      <span className="absolute -top-1.5 -right-1.5 h-3 w-3 rounded-full bg-violet-500 border-2 border-gray-900" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Switch tiers instantly to test feature gating. No billing involved.</p>
             </div>
           </CardContent>
         )}
@@ -564,7 +621,7 @@ function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; 
       {/* Security note */}
       <p className="text-xs text-gray-400 flex items-center gap-1.5">
         <Shield className="h-3 w-3 flex-shrink-0" />
-        Payments are processed securely by Stripe. We never store card details.
+        Payments are processed securely by Paddle. We never store card details.
       </p>
     </div>
   );
