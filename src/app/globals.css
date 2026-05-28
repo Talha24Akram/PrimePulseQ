@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* data-theme based dark mode for Tailwind v4 + next-themes 0.4 */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Override Tailwind v4's built-in dark variant (replaces prefers-color-scheme) */
+@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
   --background: #f9fafb;
