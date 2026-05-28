@@ -385,19 +385,19 @@ const PLANS = [
   {
     tier: "starter" as const,
     name: "Starter",
-    price: "$19",
+    price: "$49",
     features: ["Up to 100 employees", "Weekly pulse surveys", "Basic analytics", "Email support"],
   },
   {
     tier: "growth" as const,
     name: "Growth",
-    price: "$49",
+    price: "$149",
     features: ["Up to 500 employees", "Slack & Teams integration", "Advanced analytics", "Burnout detection"],
   },
   {
     tier: "enterprise" as const,
     name: "Enterprise",
-    price: "$99",
+    price: "$499",
     features: ["Unlimited employees", "SSO / SAML", "HRIS integrations", "API access", "Audit logs"],
   },
 ];
