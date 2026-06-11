@@ -79,9 +79,11 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6 pt-20">
+    <div className="relative min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6 pt-20 overflow-hidden">
       <PublicNav hideAuth />
-      <div className="w-full max-w-md">
+      <div className="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,black,transparent)]" aria-hidden />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-violet-600/12 dark:bg-violet-600/15 blur-[110px] rounded-full pointer-events-none" aria-hidden />
+      <div className="relative w-full max-w-md animate-fade-up">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
             <img src="/logo.png" alt="PrimePulseQ" className="h-9 w-9 object-contain" />
@@ -91,7 +93,7 @@ export default function SignupPage() {
           <p className="text-gray-500 mt-1 text-sm">Start with a free 1-week trial on Growth</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm dark:shadow-2xl dark:shadow-black/40 p-8">
+        <div className="bg-white/90 dark:bg-gray-900/90 glass rounded-2xl border border-gray-200 dark:border-white/10 shadow-xl shadow-gray-300/40 dark:shadow-2xl dark:shadow-black/40 p-8">
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400">
               {error}

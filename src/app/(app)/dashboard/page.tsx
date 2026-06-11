@@ -74,13 +74,49 @@ export default function DashboardPage() {
     : 0;
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const firstName = profile?.full_name?.split(" ")[0];
+
+  const stats = [
+    {
+      label: "Response Rate",
+      value: `${responseRate}%`,
+      icon: TrendingUp,
+      chip: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400",
+      extra: <Progress value={responseRate} className="mt-3" />,
+    },
+    {
+      label: "Active Surveys",
+      value: String(activeSurveys),
+      icon: FileText,
+      chip: "bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400",
+      extra: <p className="text-xs text-gray-400 mt-2">{surveys.length} total</p>,
+    },
+    {
+      label: "Employees",
+      value: String(employeeCount),
+      icon: Users,
+      chip: "bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400",
+      extra: <p className="text-xs text-gray-400 mt-2">active</p>,
+    },
+    {
+      label: "Total Responses",
+      value: String(totalResponses),
+      icon: CheckCircle2,
+      chip: "bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400",
+      extra: <p className="text-xs text-gray-400 mt-2">all time</p>,
+    },
+  ];
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 sm:mb-8 gap-4 flex-wrap">
+      <div className="flex items-center justify-between mb-6 sm:mb-8 gap-4 flex-wrap animate-fade-up">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {greeting}{firstName ? `, ${firstName}` : ""} 👋
+          </h1>
           <p className="text-gray-500 text-sm mt-1">{today}</p>
         </div>
         <Link href="/surveys/new">
@@ -93,61 +129,39 @@ export default function DashboardPage() {
 
       {/* Welcome message for new users */}
       {!loading && surveys.length === 0 && (
-        <div className="mb-6 p-5 rounded-xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20">
-          <h2 className="font-semibold text-violet-900 dark:text-violet-200 mb-1">Welcome to PrimePulseQ! 👋</h2>
-          <p className="text-sm text-violet-700 dark:text-violet-300 mb-3">Get started by adding your employees and creating your first survey.</p>
-          <div className="flex gap-3 flex-wrap">
-            <Link href="/employees"><Button size="sm" variant="outline">Add employees</Button></Link>
-            <Link href="/surveys/new"><Button size="sm">Create survey</Button></Link>
+        <div className="relative mb-6 p-6 rounded-2xl overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-700 shadow-xl shadow-violet-600/20 animate-fade-up">
+          <div className="absolute inset-0 bg-grid opacity-30" aria-hidden />
+          <div className="relative">
+            <h2 className="font-bold text-white text-lg mb-1">Welcome to PrimePulseQ! 👋</h2>
+            <p className="text-sm text-violet-100 mb-4">Get started by adding your employees and creating your first survey.</p>
+            <div className="flex gap-3 flex-wrap">
+              <Link href="/employees">
+                <Button size="sm" className="!bg-white/15 !text-white border border-white/25 hover:!bg-white/25 !shadow-none !bg-none">Add employees</Button>
+              </Link>
+              <Link href="/surveys/new">
+                <Button size="sm" className="!bg-white !text-violet-700 hover:!bg-violet-50 !shadow-none !bg-none">Create survey</Button>
+              </Link>
+            </div>
           </div>
         </div>
       )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">Response Rate</p>
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{responseRate}%</p>
-            <Progress value={responseRate} className="mt-3" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">Active Surveys</p>
-              <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{activeSurveys}</p>
-            <p className="text-xs text-gray-400 mt-2">{surveys.length} total</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">Employees</p>
-              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{employeeCount}</p>
-            <p className="text-xs text-gray-400 mt-2">active</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">Total Responses</p>
-              <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{totalResponses}</p>
-            <p className="text-xs text-gray-400 mt-2">all time</p>
-          </CardContent>
-        </Card>
+        {stats.map((stat, i) => (
+          <Card key={stat.label} className="animate-fade-up" style={{ animationDelay: `${i * 70}ms` }}>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs sm:text-sm text-gray-500 font-medium">{stat.label}</p>
+                <div className={`h-7 w-7 sm:h-8 sm:w-8 rounded-lg flex items-center justify-center ${stat.chip}`}>
+                  <stat.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </div>
+              </div>
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{stat.value}</p>
+              {stat.extra}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Recent surveys */}

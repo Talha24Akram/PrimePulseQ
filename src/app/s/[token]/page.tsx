@@ -159,9 +159,10 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
-        <div className="w-full max-w-md text-center">
-          <div className="h-20 w-20 rounded-full bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto mb-6">
+      <div className="relative min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6 overflow-hidden">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[350px] bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" aria-hidden />
+        <div className="relative w-full max-w-md text-center animate-fade-up">
+          <div className="h-20 w-20 rounded-full bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto mb-6 animate-scale-in">
             <CheckCircle2 className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Thank you!</h1>
@@ -192,17 +193,18 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
             100% anonymous
           </div>
         </div>
-        <div className="h-0.5 bg-gray-100 dark:bg-white/5">
-          <div className="h-0.5 bg-violet-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+        <div className="h-1 bg-gray-100 dark:bg-white/5">
+          <div className="h-1 bg-gradient-to-r from-violet-500 to-violet-600 rounded-r-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-xl">
+      <div className="relative flex-1 flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-violet-600/8 dark:bg-violet-600/12 blur-[110px] rounded-full pointer-events-none" aria-hidden />
+        <div className="relative w-full max-w-xl">
           {currentStep === 0 && (
-            <div className="text-center mb-10">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{survey.title}</h1>
+            <div className="text-center mb-8 sm:mb-10 animate-fade-up">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">{survey.title}</h1>
               {survey.description && (
                 <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">{survey.description}</p>
               )}
@@ -210,7 +212,7 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
           )}
 
           {/* Question card */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/8 shadow-md dark:shadow-2xl dark:shadow-black/30 p-8">
+          <div key={currentStep} className="animate-scale-in bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/8 shadow-xl shadow-gray-200/50 dark:shadow-2xl dark:shadow-black/30 p-6 sm:p-8">
             <div className="flex items-center gap-2 mb-6">
               <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                 Question {currentStep + 1} of {questions.length}

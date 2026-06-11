@@ -176,21 +176,7 @@ function SettingsInner() {
             </CardContent>
           </Card>
 
-          <Card className="mt-6 border-red-500/20">
-            <CardHeader>
-              <CardTitle className="text-base text-red-400">Danger Zone</CardTitle>
-              <CardDescription>These actions are irreversible.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20 bg-red-500/5">
-                <div>
-                  <p className="font-medium text-red-300 text-sm">Delete workspace</p>
-                  <p className="text-xs text-red-400/70 mt-0.5">Permanently deletes all surveys, responses, and employee data.</p>
-                </div>
-                <Button variant="destructive" size="sm">Delete</Button>
-              </div>
-            </CardContent>
-          </Card>
+          <DangerZone companyName={company.name} />
         </TabsContent>
 
         {/* Notifications */}
@@ -376,6 +362,92 @@ function SettingsInner() {
   );
 }
 
+// ── Danger Zone ──────────────────────────────────────────────────────────────
+function DangerZone({ companyName }: { companyName: string }) {
+  const [confirming, setConfirming] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+
+  const expected = companyName || "DELETE";
+
+  async function handleDelete() {
+    setDeleting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        window.location.href = "/";
+      } else {
+        setError(data.error ?? "Failed to delete workspace.");
+        setDeleting(false);
+      }
+    } catch {
+      setError("Network error. Please try again.");
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <Card className="mt-6 border-red-200 dark:border-red-500/20">
+      <CardHeader>
+        <CardTitle className="text-base text-red-600 dark:text-red-400">Danger Zone</CardTitle>
+        <CardDescription>These actions are irreversible.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="p-4 rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50/60 dark:bg-red-500/5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="font-medium text-red-700 dark:text-red-300 text-sm">Delete workspace</p>
+              <p className="text-xs text-red-500/80 dark:text-red-400/70 mt-0.5">
+                Permanently deletes all surveys, responses, and employee data — and your account.
+              </p>
+            </div>
+            {!confirming && (
+              <Button variant="destructive" size="sm" onClick={() => setConfirming(true)}>
+                Delete
+              </Button>
+            )}
+          </div>
+
+          {confirming && (
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-red-600 dark:text-red-400">
+                Type <strong>{expected}</strong> to confirm. This cannot be undone.
+              </p>
+              <Input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={expected}
+                className="max-w-xs"
+              />
+              {error && <p className="text-xs text-red-500">{error}</p>}
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={confirmText !== expected || deleting}
+                  onClick={handleDelete}
+                  className="gap-2"
+                >
+                  {deleting && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {deleting ? "Deleting..." : "Permanently delete everything"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { setConfirming(false); setConfirmText(""); setError(""); }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Billing Tab ──────────────────────────────────────────────────────────────
 const PLANS = [
   {
@@ -525,18 +597,18 @@ function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; 
             </div>
 
             {/* Owner tier switcher */}
-            <div className="pt-2 border-t border-white/10">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Simulate tier</p>
+            <div className="pt-2 border-t border-gray-200 dark:border-white/10">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 mt-2">Simulate tier</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {(["free", "starter", "growth", "enterprise"] as Tier[]).map((t) => (
                   <button
                     key={t}
                     onClick={() => handleOwnerSetTier(t)}
                     disabled={ownerSwitching !== null || ownerTier === t}
-                    className={`relative px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                    className={`relative px-3 py-2.5 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
                       ownerTier === t
-                        ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                        : "border-white/10 bg-white/5 text-gray-400 hover:border-violet-500/40 hover:text-gray-200"
+                        ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
+                        : "border-gray-200 bg-gray-50 text-gray-500 hover:border-violet-400 hover:text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:border-violet-500/40 dark:hover:text-gray-200"
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {ownerSwitching === t ? (
@@ -548,7 +620,7 @@ function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; 
                       <span className="capitalize">{t}</span>
                     )}
                     {ownerTier === t && (
-                      <span className="absolute -top-1.5 -right-1.5 h-3 w-3 rounded-full bg-violet-500 border-2 border-gray-900" />
+                      <span className="absolute -top-1.5 -right-1.5 h-3 w-3 rounded-full bg-violet-500 border-2 border-white dark:border-gray-900" />
                     )}
                   </button>
                 ))}

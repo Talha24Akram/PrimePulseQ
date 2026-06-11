@@ -4,22 +4,129 @@
 @variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --background: #f9fafb;
-  --foreground: #111827;
+  --background: #fafafa;
+  --foreground: #0a0a12;
 }
 
 [data-theme="dark"] {
-  --background: #030712;
-  --foreground: #f9fafb;
+  --background: #07070d;
+  --foreground: #f5f5fa;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Brand scale */
+  --color-brand-50: #f4f1ff;
+  --color-brand-100: #ebe5ff;
+  --color-brand-200: #d9cfff;
+  --color-brand-300: #beaaff;
+  --color-brand-400: #9f7bff;
+  --color-brand-500: #8347ff;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6b21d6;
+  --color-brand-800: #581cb3;
+  --color-brand-900: #491992;
+
+  /* Animations */
+  --animate-fade-up: fade-up 0.6s cubic-bezier(0.21, 1.02, 0.73, 1) both;
+  --animate-fade-in: fade-in 0.5s ease both;
+  --animate-scale-in: scale-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) both;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Selection */
+::selection {
+  background: rgba(124, 58, 237, 0.25);
+}
+
+/* Refined scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.18);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.35);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Utility: gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 45%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Utility: subtle grid backdrop for hero sections */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(124, 58, 237, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(124, 58, 237, 0.06) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+[data-theme="dark"] .bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(139, 92, 246, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 92, 246, 0.07) 1px, transparent 1px);
+}
+
+/* Utility: glass card */
+.glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
