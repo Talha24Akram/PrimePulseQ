@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "test": "echo \"No test suite configured yet\" && exit 0"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

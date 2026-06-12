@@ -100,7 +100,7 @@ const faqs = [
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
       <PublicNav />
       {/* Header */}
       <section className="pt-24 sm:pt-28 pb-10 sm:pb-16 px-4 sm:px-6 text-center">
@@ -190,7 +190,7 @@ export default function PricingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-white/8 py-8 px-6 bg-gray-50 dark:bg-gray-950">
+      <footer className="border-t border-gray-200 dark:border-white/8 py-8 px-6 bg-white dark:bg-gray-950">
         <div className="mx-auto max-w-7xl flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-400">© 2026 PrimePulseQ. All rights reserved.</p>
           <div className="flex gap-6">

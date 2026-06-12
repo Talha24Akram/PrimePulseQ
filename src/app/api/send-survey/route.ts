@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { notifyWebhooks } from "@/lib/webhooks";
 import { escapeHtml } from "@/lib/utils";
@@ -61,13 +62,43 @@ export async function POST(request: NextRequest) {
 
     const resend = new Resend(process.env.RESEND_API_KEY);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-    const surveyUrl = `${appUrl}/s/${surveyId}`;
     const fromName = profile?.company_name ?? profile?.full_name ?? "Your Team";
     const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+
+    // Service role client for inserting survey tokens (bypasses RLS)
+    const serviceClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Generate per-employee tokens (upsert so resending creates a fresh token)
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const tokenRows = employees.map((emp) => ({
+      token: crypto.randomUUID(),
+      survey_id: surveyId,
+      employee_id: emp.id,
+      used: false,
+      expires_at: expiresAt,
+    }));
+
+    await serviceClient
+      .from("survey_tokens")
+      .upsert(tokenRows, { onConflict: "survey_id,employee_id", ignoreDuplicates: false });
+
+    // Re-fetch tokens to get the authoritative UUIDs (upsert may have updated existing rows)
+    const { data: savedTokens } = await serviceClient
+      .from("survey_tokens")
+      .select("token, employee_id")
+      .eq("survey_id", surveyId)
+      .in("employee_id", employees.map((e) => e.id));
+
+    const tokenByEmployee = new Map(savedTokens?.map((r) => [r.employee_id, r.token]) ?? []);
 
     // Send emails (batch up to 50 at a time — Resend free limit)
     const results = await Promise.allSettled(
       employees.map((emp) => {
+        const surveyToken = tokenByEmployee.get(emp.id);
+        const surveyUrl = surveyToken ? `${appUrl}/s/${surveyToken}` : `${appUrl}/s/${surveyId}`;
         const unsubToken = Buffer.from(`${user.id}:${emp.id}`).toString("base64url");
         const unsubscribeUrl = `${appUrl}/api/unsubscribe?t=${unsubToken}`;
         return resend.emails.send({
@@ -91,13 +122,14 @@ export async function POST(request: NextRequest) {
     const failed = results.filter((r) => r.status === "rejected").length;
 
     // Post to Slack / Teams if configured
+    const webhookSurveyUrl = `${appUrl}/surveys/${surveyId}`;
     await notifyWebhooks(
       (profile as { slack_webhook_url?: string })?.slack_webhook_url,
       (profile as { teams_webhook_url?: string })?.teams_webhook_url,
       {
         title: `📋 Survey sent: ${survey.title}`,
         text: `${sent} employee${sent !== 1 ? "s" : ""} have been invited to complete the survey.`,
-        surveyUrl,
+        surveyUrl: webhookSurveyUrl,
         companyName: fromName,
       }
     );

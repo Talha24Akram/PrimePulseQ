@@ -61,7 +61,7 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center">
           <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
@@ -79,7 +79,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6 pt-20 overflow-hidden">
+    <div className="relative min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center p-6 pt-20 overflow-hidden">
       <PublicNav hideAuth />
       <div className="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,black,transparent)]" aria-hidden />
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-violet-600/12 dark:bg-violet-600/15 blur-[110px] rounded-full pointer-events-none" aria-hidden />

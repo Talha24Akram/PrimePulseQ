@@ -12,16 +12,23 @@ create table if not exists profiles (
   company_slug        text unique,
   company_website     text,
   avatar_url          text,
+  slack_webhook_url   text,
+  teams_webhook_url   text,
   is_owner            boolean default false,
   subscription_tier   text default 'free'
     check (subscription_tier in ('free','starter','growth','enterprise')),
   subscription_status text default 'active'
-    check (subscription_status in ('active','trialing','past_due','cancelled')),
+    -- 'canceled' matches Paddle's spelling; 'cancelled' kept for backwards compat
+    check (subscription_status in ('active','trialing','past_due','canceled','cancelled')),
   trial_ends_at       timestamptz,
   paddle_customer_id  text,
   created_at          timestamptz default now(),
   updated_at          timestamptz default now()
 );
+
+-- Run these separately if the table already exists:
+-- alter table profiles add column if not exists slack_webhook_url text;
+-- alter table profiles add column if not exists teams_webhook_url text;
 
 -- Auto-create profile when a user signs up
 create or replace function handle_new_user()
@@ -83,10 +90,14 @@ create table if not exists questions (
   text        text not null,
   type        text not null
     check (type in ('scale','yes_no','multiple_choice','text')),
+  required    boolean default true,
   options     jsonb,
   order_index integer default 0,
   created_at  timestamptz default now()
 );
+
+-- Run this separately if the table already exists:
+-- alter table questions add column if not exists required boolean default true;
 
 -- ── SURVEY TOKENS (one per employee per survey) ──────────────
 -- Token is used to open the survey; employee identity is NOT stored in responses
@@ -160,7 +171,9 @@ create policy "profiles_own"    on profiles           for all using (auth.uid() 
 create policy "employees_own"   on employees          for all using (workspace_id = auth.uid());
 create policy "surveys_own"     on surveys            for all using (workspace_id = auth.uid());
 create policy "questions_own"   on questions          for all using (survey_id in (select id from surveys where workspace_id = auth.uid()));
-create policy "tokens_read"     on survey_tokens      for select using (survey_id in (select id from surveys where workspace_id = auth.uid()) or auth.uid() is null);
+-- Token validation is done server-side via the service role key (bypasses RLS).
+-- Public users have no direct table access; owners can read their own tokens.
+create policy "tokens_own"      on survey_tokens      for all    using (survey_id in (select id from surveys where workspace_id = auth.uid()));
 create policy "responses_read"  on responses          for select using (survey_id in (select id from surveys where workspace_id = auth.uid()));
 create policy "responses_insert" on responses         for insert with check (true);
 create policy "audit_own"       on audit_logs         for all using (workspace_id = auth.uid());

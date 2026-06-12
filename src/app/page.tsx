@@ -17,7 +17,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-gray-950 overflow-x-hidden">
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-gray-200/70 dark:border-white/8 bg-gray-50/80 dark:bg-gray-950/80 glass">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex h-16 items-center justify-between">
@@ -327,7 +327,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-white/8 py-10 px-4 sm:px-6 bg-gray-50 dark:bg-gray-950">
+      <footer className="border-t border-gray-200 dark:border-white/8 py-10 px-4 sm:px-6 bg-white dark:bg-gray-950">
         <div className="mx-auto max-w-7xl flex flex-col items-center gap-6 md:flex-row md:justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="PrimePulseQ" className="h-6 w-6 object-contain" />

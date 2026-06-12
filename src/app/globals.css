@@ -4,7 +4,7 @@
 @variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --background: #fafafa;
+  --background: #ffffff;
   --foreground: #0a0a12;
 }
 

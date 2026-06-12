@@ -61,7 +61,7 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+    <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
       <div className="text-center">
         <div className="h-10 w-10 rounded-full border-4 border-violet-600 border-t-transparent animate-spin mx-auto mb-4" />
         <p className="text-gray-500 text-sm">{status}</p>

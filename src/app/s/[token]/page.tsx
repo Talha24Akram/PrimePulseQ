@@ -1,11 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { use } from "react";
-import { CheckCircle2, Lock, ArrowRight } from "lucide-react";
+import { CheckCircle2, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 
 interface Question {
   id: string;
@@ -20,61 +19,44 @@ interface SurveyData {
   id: string;
   title: string;
   description: string | null;
-  status: string;
   company_name: string;
   questions: Question[];
 }
 
 type Answers = Record<string, string | number>;
+type LoadState = "loading" | "ready" | "not_found" | "already_used" | "expired" | "closed" | "error";
 
 export default function SurveyResponsePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [survey, setSurvey] = useState<SurveyData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [closed, setClosed] = useState(false);
+  const [loadState, setLoadState] = useState<LoadState>("loading");
   const [answers, setAnswers] = useState<Answers>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
     async function loadSurvey() {
-      const supabase = createClient();
-
-      // The token in the URL is the survey ID (public link)
-      const { data: surveyData, error } = await supabase
-        .from("surveys")
-        .select("id, title, description, status, workspace_id")
-        .eq("id", token)
-        .single();
-
-      if (error || !surveyData) { setNotFound(true); setLoading(false); return; }
-      if (surveyData.status !== "active") { setClosed(true); setLoading(false); return; }
-
-      // Load questions
-      const { data: questions } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("survey_id", surveyData.id)
-        .order("order_index");
-
-      // Load workspace company name
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("company_name")
-        .eq("id", surveyData.workspace_id)
-        .single();
-
-      setSurvey({
-        id: surveyData.id,
-        title: surveyData.title,
-        description: surveyData.description,
-        status: surveyData.status,
-        company_name: profile?.company_name ?? "Your Company",
-        questions: (questions ?? []) as Question[],
-      });
-      setLoading(false);
+      try {
+        const res = await fetch(`/api/survey/${encodeURIComponent(token)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSurvey(data);
+          setLoadState("ready");
+        } else {
+          const data = await res.json().catch(() => ({}));
+          const errorMap: Record<string, LoadState> = {
+            not_found: "not_found",
+            already_used: "already_used",
+            expired: "expired",
+            closed: "closed",
+          };
+          setLoadState(errorMap[data.error] ?? "error");
+        }
+      } catch {
+        setLoadState("error");
+      }
     }
     loadSurvey();
   }, [token]);
@@ -93,49 +75,95 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
   async function handleNext() {
     if (!survey) return;
     const isLast = currentStep === survey.questions.length - 1;
-    if (isLast) {
-      setSubmitting(true);
+    if (!isLast) {
+      setCurrentStep((s) => s + 1);
+      return;
+    }
 
-      const supabase = createClient();
-      await supabase.from("responses").insert({
-        survey_id: survey.id,
-        answers,
+    setSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const res = await fetch("/api/survey/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, answers }),
       });
 
-      setSubmitted(true);
-    } else {
-      setCurrentStep((s) => s + 1);
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 410) {
+          const terminalMap: Record<string, LoadState> = {
+            "This survey link has already been used": "already_used",
+            "This survey link has expired": "expired",
+            "This survey is no longer accepting responses": "closed",
+          };
+          const newState = terminalMap[data.error];
+          if (newState) { setLoadState(newState); return; }
+        }
+        if (res.status === 429) {
+          setSubmitError("Too many submissions from this device. Please try again in a few minutes.");
+        } else {
+          setSubmitError(data.error ?? "Failed to submit. Please try again.");
+        }
+      }
+    } catch {
+      setSubmitError("Network error. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
-  if (loading) {
+  // ── Loading ──────────────────────────────────────────────────
+  if (loadState === "loading") {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
         <div className="text-gray-400 text-sm">Loading survey...</div>
       </div>
     );
   }
 
-  if (notFound) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Survey not found</h1>
-          <p className="text-gray-500">This survey link is invalid or has expired.</p>
-        </div>
-      </div>
-    );
-  }
+  // ── Terminal error states ────────────────────────────────────
+  const terminalInfo: Record<Exclude<LoadState, "loading" | "ready">, { icon: string; title: string; body: string }> = {
+    not_found: {
+      icon: "🔍",
+      title: "Survey not found",
+      body: "This survey link is invalid or the survey has been deleted.",
+    },
+    already_used: {
+      icon: "✅",
+      title: "Already submitted",
+      body: "This link has already been used to submit a response. Each link can only be used once to protect anonymity.",
+    },
+    expired: {
+      icon: "⏰",
+      title: "Link expired",
+      body: "This survey link has expired. Links are valid for 7 days. Ask your HR team to resend the survey.",
+    },
+    closed: {
+      icon: "🔒",
+      title: "Survey closed",
+      body: "This survey is not currently accepting responses. It may have closed or not yet been published.",
+    },
+    error: {
+      icon: "⚠️",
+      title: "Something went wrong",
+      body: "Unable to load this survey. Please try refreshing or contact your HR team.",
+    },
+  };
 
-  if (closed) {
+  if (loadState !== "ready") {
+    const info = terminalInfo[loadState];
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
-          <div className="h-16 w-16 rounded-2xl bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">🔒</span>
+          <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4 text-3xl">
+            {info.icon}
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Survey not available</h1>
-          <p className="text-gray-500">This survey is not currently accepting responses. It may have closed or is not yet published.</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{info.title}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{info.body}</p>
         </div>
       </div>
     );
@@ -143,9 +171,9 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
 
   if (!survey || survey.questions.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No questions yet</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No questions yet</h1>
           <p className="text-gray-500">This survey has no questions. Check back later.</p>
         </div>
       </div>
@@ -157,9 +185,10 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
   const isLast = currentStep === questions.length - 1;
   const progress = ((currentStep + 1) / questions.length) * 100;
 
+  // ── Success ──────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="relative min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-6 overflow-hidden">
+      <div className="relative min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center p-6 overflow-hidden">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[350px] bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" aria-hidden />
         <div className="relative w-full max-w-md text-center animate-fade-up">
           <div className="h-20 w-20 rounded-full bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto mb-6 animate-scale-in">
@@ -179,8 +208,9 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
     );
   }
 
+  // ── Survey form ──────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+    <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
       {/* Top bar */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/8">
         <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -300,6 +330,14 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
               />
             )}
           </div>
+
+          {/* Submit error */}
+          {submitError && (
+            <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-sm text-red-700 dark:text-red-400">
+              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              {submitError}
+            </div>
+          )}
 
           {/* Navigation */}
           <div className="flex items-center justify-between mt-6">

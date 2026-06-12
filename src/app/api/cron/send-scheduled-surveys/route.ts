@@ -85,10 +85,33 @@ export async function GET(request: NextRequest) {
     if (!employees?.length) continue;
 
     const companyName = profile?.company_name ?? profile?.full_name ?? "Your Team";
-    const surveyUrl = `${appUrl}/s/${survey.id}`;
+
+    // Generate per-employee survey tokens (expire in 7 days)
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const tokenRows = employees.map((emp) => ({
+      token: crypto.randomUUID(),
+      survey_id: survey.id,
+      employee_id: emp.id,
+      used: false,
+      expires_at: expiresAt,
+    }));
+
+    await supabase
+      .from("survey_tokens")
+      .upsert(tokenRows, { onConflict: "survey_id,employee_id", ignoreDuplicates: false });
+
+    const { data: savedTokens } = await supabase
+      .from("survey_tokens")
+      .select("token, employee_id")
+      .eq("survey_id", survey.id)
+      .in("employee_id", employees.map((e) => e.id));
+
+    const tokenByEmployee = new Map(savedTokens?.map((r) => [r.employee_id, r.token]) ?? []);
 
     const results = await Promise.allSettled(
       employees.map((emp) => {
+        const surveyToken = tokenByEmployee.get(emp.id);
+        const surveyUrl = surveyToken ? `${appUrl}/s/${surveyToken}` : `${appUrl}/s/${survey.id}`;
         const unsubToken = Buffer.from(`${survey.workspace_id}:${emp.id}`).toString("base64url");
         const unsubscribeUrl = `${appUrl}/api/unsubscribe?t=${unsubToken}`;
         return resend.emails.send({
@@ -111,14 +134,14 @@ export async function GET(request: NextRequest) {
     const sent = results.filter((r) => r.status === "fulfilled").length;
     totalSent += sent;
 
-    // Post to Slack / Teams
+    // Post to Slack / Teams — link to the admin survey view, not a personal token
     await notifyWebhooks(
       (profile as { slack_webhook_url?: string })?.slack_webhook_url,
       (profile as { teams_webhook_url?: string })?.teams_webhook_url,
       {
         title: `📋 Pulse survey: ${survey.title}`,
         text: `Your ${survey.frequency} pulse survey is now live. ${sent} team member${sent !== 1 ? "s" : ""} have been invited.`,
-        surveyUrl: `${appUrl}/s/${survey.id}`,
+        surveyUrl: `${appUrl}/surveys/${survey.id}`,
         companyName,
       }
     );
