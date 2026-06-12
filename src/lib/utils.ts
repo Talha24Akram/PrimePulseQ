@@ -28,3 +28,13 @@ export function getEngagementLabel(score: number): string {
 export function generateToken(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
+
+/** Escape user-controlled strings before interpolating into HTML email bodies. */
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}

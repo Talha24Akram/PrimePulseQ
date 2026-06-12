@@ -2,15 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 import { notifyWebhooks } from "@/lib/webhooks";
+import { escapeHtml } from "@/lib/utils";
 
 // This route is called by Vercel Cron daily.
 // It finds all active surveys whose frequency matches today's schedule
 // and sends email reminders to all active employees.
 
 export async function GET(request: NextRequest) {
-  // Verify this is a legitimate Vercel Cron call
+  // Guard: CRON_SECRET must be configured — an undefined secret means any
+  // caller sending "Bearer undefined" would pass the check below.
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("CRON_SECRET env var is not set — cron endpoint disabled");
+    return NextResponse.json({ error: "Cron not configured" }, { status: 500 });
+  }
+
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -66,12 +74,13 @@ export async function GET(request: NextRequest) {
       .eq("id", survey.workspace_id)
       .single();
 
-    // Fetch active employees for this workspace
+    // Fetch active employees — exclude those who have opted out of emails
     const { data: employees } = await supabase
       .from("employees")
       .select("id, name, email")
       .eq("workspace_id", survey.workspace_id)
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("email_opted_out", false);
 
     if (!employees?.length) continue;
 
@@ -79,20 +88,24 @@ export async function GET(request: NextRequest) {
     const surveyUrl = `${appUrl}/s/${survey.id}`;
 
     const results = await Promise.allSettled(
-      employees.map((emp) =>
-        resend.emails.send({
+      employees.map((emp) => {
+        const unsubToken = Buffer.from(`${survey.workspace_id}:${emp.id}`).toString("base64url");
+        const unsubscribeUrl = `${appUrl}/api/unsubscribe?t=${unsubToken}`;
+        return resend.emails.send({
           from: `${companyName} <${fromEmail}>`,
           to: emp.email,
           subject: `[Pulse] ${survey.title}`,
+          headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
           html: buildEmailHtml({
             employeeName: emp.name ?? emp.email.split("@")[0],
             surveyTitle: survey.title,
             surveyDescription: survey.description ?? "",
             surveyUrl,
             companyName,
+            unsubscribeUrl,
           }),
-        })
-      )
+        });
+      })
     );
 
     const sent = results.filter((r) => r.status === "fulfilled").length;
@@ -130,13 +143,22 @@ function buildEmailHtml({
   surveyDescription,
   surveyUrl,
   companyName,
+  unsubscribeUrl,
 }: {
   employeeName: string;
   surveyTitle: string;
   surveyDescription: string;
   surveyUrl: string;
   companyName: string;
+  unsubscribeUrl: string;
 }) {
+  const eName = escapeHtml(employeeName);
+  const eTitle = escapeHtml(surveyTitle);
+  const eDesc = surveyDescription ? escapeHtml(surveyDescription) : "";
+  const eCompany = escapeHtml(companyName);
+  const eUrl = surveyUrl.replace(/"/g, "%22");
+  const eUnsub = unsubscribeUrl.replace(/"/g, "%22");
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
@@ -145,28 +167,29 @@ function buildEmailHtml({
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
         <tr><td style="padding-bottom:24px;text-align:center;">
-          <span style="font-size:20px;font-weight:700;color:#111827;">${companyName}</span>
+          <span style="font-size:20px;font-weight:700;color:#111827;">${eCompany}</span>
         </td></tr>
         <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e5e7eb;padding:40px 36px;">
-          <p style="margin:0 0 8px;font-size:15px;color:#6b7280;">Hi ${employeeName},</p>
-          <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#111827;">${surveyTitle}</h1>
-          ${surveyDescription ? `<p style="margin:0 0 24px;font-size:15px;color:#374151;">${surveyDescription}</p>` : ""}
+          <p style="margin:0 0 8px;font-size:15px;color:#6b7280;">Hi ${eName},</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#111827;">${eTitle}</h1>
+          ${eDesc ? `<p style="margin:0 0 24px;font-size:15px;color:#374151;">${eDesc}</p>` : ""}
           <p style="margin:0 0 28px;font-size:15px;color:#374151;line-height:1.6;">
             Your recurring pulse check is ready. It takes <strong>less than 2 minutes</strong> and is completely <strong>anonymous</strong>.
           </p>
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td align="center" style="padding-bottom:28px;">
-              <a href="${surveyUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
+              <a href="${eUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
                 Take the survey →
               </a>
             </td></tr>
           </table>
           <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;">
-            Or copy: <a href="${surveyUrl}" style="color:#7c3aed;">${surveyUrl}</a>
+            Or copy: <a href="${eUrl}" style="color:#7c3aed;">${eUrl}</a>
           </p>
         </td></tr>
         <tr><td style="padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#9ca3af;">100% anonymous. Your identity is never stored or linked to your responses.</p>
+          <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;">100% anonymous. Your identity is never stored or linked to your responses.</p>
+          <p style="margin:0;font-size:11px;color:#d1d5db;">Don't want to receive survey emails? <a href="${eUnsub}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a></p>
         </td></tr>
       </table>
     </td></tr>

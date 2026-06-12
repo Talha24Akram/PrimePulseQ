@@ -239,9 +239,9 @@ export default function PrivacyPage() {
                     <tbody className="divide-y divide-gray-100 dark:divide-white/8">
                       {[
                         { provider: "Paddle", purpose: "Payment processing and merchant of record", data: "Billing name, email, card details (handled directly by Paddle — we never see full card numbers). Paddle acts as the merchant of record for all transactions." },
-                        { provider: "SendGrid (Twilio)", purpose: "Transactional email delivery", data: "Employee email addresses (for survey delivery), Admin email (for notifications and billing)" },
+                        { provider: "Resend", purpose: "Transactional email delivery", data: "Employee email addresses (for survey delivery), Admin email (for notifications and billing)" },
                         { provider: "Amazon Web Services (AWS)", purpose: "Cloud hosting and infrastructure", data: "All application data is stored on AWS servers in encrypted form; AWS does not independently access or process your data" },
-                        { provider: "Supabase", purpose: "Database and authentication", data: "All structured data (accounts, surveys, responses); Supabase is built on AWS with SOC 2 Type II certification" },
+                        { provider: "Supabase", purpose: "Database and authentication", data: "All structured data (accounts, surveys, responses, integration credentials); Supabase is built on AWS with SOC 2 Type II certification. Data is encrypted at rest (AES-256) and in transit (TLS 1.3). Integration webhook URLs (Slack, Teams) are stored in the database and protected by row-level security — no other workspace can access your credentials." },
                       ].map((row) => (
                         <tr key={row.provider}>
                           <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200 align-top">{row.provider}</td>

@@ -370,6 +370,30 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
                 <p className="text-sm">Share the link above with your employees to start collecting responses.</p>
               </CardContent>
             </Card>
+          ) : responseCount < 5 ? (
+            // Privacy threshold: results are withheld until 5+ responses to prevent
+            // de-anonymization by process of elimination in small teams.
+            // This is explicitly promised in the Privacy Policy (Section 3).
+            <Card className="border-amber-200 bg-amber-50 dark:border-amber-500/20 dark:bg-amber-500/5">
+              <CardContent className="p-10 text-center">
+                <div className="h-12 w-12 rounded-full bg-amber-100 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                </div>
+                <p className="text-base font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                  {responseCount} of 5 minimum responses received
+                </p>
+                <p className="text-sm text-amber-700 dark:text-amber-400 max-w-md mx-auto">
+                  To protect employee anonymity, results are only revealed once at least 5 responses have been collected. This prevents identifying individuals in small teams.
+                </p>
+                <div className="mt-4 mx-auto max-w-xs bg-amber-100 dark:bg-amber-500/10 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full bg-amber-500"
+                    style={{ width: `${(responseCount / 5) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">{responseCount}/5 responses</p>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-4">
               {questions.map((q) => {

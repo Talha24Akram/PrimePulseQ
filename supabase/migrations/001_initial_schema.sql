@@ -46,16 +46,20 @@ create trigger on_auth_user_created
 
 -- ── EMPLOYEES ───────────────────────────────────────────────
 create table if not exists employees (
-  id           uuid default gen_random_uuid() primary key,
-  workspace_id uuid references profiles(id) on delete cascade not null,
-  email        text not null,
-  name         text,
-  department   text,
-  role         text,
-  is_active    boolean default true,
-  created_at   timestamptz default now(),
+  id                uuid default gen_random_uuid() primary key,
+  workspace_id      uuid references profiles(id) on delete cascade not null,
+  email             text not null,
+  name              text,
+  department        text,
+  role              text,
+  is_active         boolean default true,
+  email_opted_out   boolean default false,  -- employee unsubscribed from survey emails
+  created_at        timestamptz default now(),
   unique(workspace_id, email)
 );
+
+-- Run this separately if table already exists:
+-- alter table employees add column if not exists email_opted_out boolean default false;
 
 -- ── SURVEYS ─────────────────────────────────────────────────
 create table if not exists surveys (

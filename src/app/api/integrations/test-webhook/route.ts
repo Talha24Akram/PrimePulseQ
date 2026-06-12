@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+// Allowlist of trusted webhook hostnames — prevents SSRF to internal/cloud-metadata services.
+const ALLOWED_WEBHOOK_HOSTS = [
+  "hooks.slack.com",
+  "outlook.office.com",
+  "outlook.office365.com",
+  "hooks.office.com",
+];
+
+function isAllowedWebhookUrl(raw: string): boolean {
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "https:") return false;
+    return ALLOWED_WEBHOOK_HOSTS.some(
+      (host) => parsed.hostname === host || parsed.hostname.endsWith("." + host)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -15,6 +35,13 @@ export async function POST(request: NextRequest) {
 
   const { url, type } = await request.json();
   if (!url) return NextResponse.json({ error: "URL required" }, { status: 400 });
+
+  if (!isAllowedWebhookUrl(url)) {
+    return NextResponse.json(
+      { error: "Invalid webhook URL. Must be a Slack (hooks.slack.com) or Teams (outlook.office.com) URL over HTTPS." },
+      { status: 400 }
+    );
+  }
 
   try {
     let body: object;

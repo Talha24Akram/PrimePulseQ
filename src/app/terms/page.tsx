@@ -286,7 +286,7 @@ export default function TermsPage() {
 
                 <SubSection title="Data Processing Agreement (DPA)">
                   <p>
-                    Enterprise customers or those requiring a formal Data Processing Agreement for GDPR compliance may request a DPA by contacting <strong>{CONTACT_EMAIL}</strong>.
+                    A Data Processing Agreement (DPA) is available to all customers who require one for GDPR or other regulatory compliance — this is not limited to Enterprise plans. Under GDPR Article 28, a DPA is required for any controller-processor relationship where personal data is processed on your behalf. To request a DPA, email <strong>{CONTACT_EMAIL}</strong> with &ldquo;DPA Request&rdquo; in the subject line. We will respond within 5 business days.
                   </p>
                 </SubSection>
               </Section>

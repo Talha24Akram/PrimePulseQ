@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { escapeHtml } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,9 +30,9 @@ export async function POST(request: NextRequest) {
 
     const resend = new Resend(process.env.RESEND_API_KEY);
     const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
-    const displayName = employeeName ?? employeeEmail.split("@")[0];
-    const company = companyName ?? "Your employer";
-    const contactEmail = adminEmail ?? user.email ?? "";
+    const displayName = escapeHtml(employeeName ?? employeeEmail.split("@")[0]);
+    const company = escapeHtml(companyName ?? "Your employer");
+    const contactEmail = escapeHtml(adminEmail ?? user.email ?? "");
 
     const html = `<!DOCTYPE html>
 <html>

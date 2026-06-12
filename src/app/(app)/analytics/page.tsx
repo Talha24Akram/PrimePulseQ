@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useProfile } from "@/hooks/useProfile";
 import { TierGate } from "@/components/tier-gate";
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Download, BarChart3 } from "lucide-react";
@@ -134,30 +134,21 @@ export default function AnalyticsPage() {
 
     setEngagementTrend(trend);
 
-    // ── Department scores (from employees who have departments) ──
-    const deptMap = new Map<string, number[]>();
+    // Department breakdown — employee counts only.
+    // Per-department scores are intentionally not computed: because responses are
+    // anonymous (no employee_id stored), we cannot link a response to a department.
+    // Showing the overall average per-department would be fabricated data.
+    const deptCountMap = new Map<string, number>();
     employees.forEach((e) => {
       if (e.department) {
-        if (!deptMap.has(e.department)) deptMap.set(e.department, []);
+        deptCountMap.set(e.department, (deptCountMap.get(e.department) ?? 0) + 1);
       }
     });
-
-    // We can't link anonymous responses to departments, so show dept employee counts
-    // and use overall avg score as proxy (real linking would need dept in responses)
-    const overallScores: number[] = [];
-    responses.forEach((r) => {
-      Object.entries(r.answers).forEach(([qId, v]) => {
-        if (scaleQuestionIds.has(qId)) overallScores.push(Number(v) * 10);
-      });
-    });
-    const overallAvg = overallScores.length
-      ? Math.round(overallScores.reduce((a, b) => a + b, 0) / overallScores.length)
-      : 0;
-
-    const depts: DeptScore[] = Array.from(deptMap.entries()).map(([dept]) => {
-      const count = employees.filter((e) => e.department === dept).length;
-      return { dept, score: overallAvg, count };
-    });
+    const depts: DeptScore[] = Array.from(deptCountMap.entries()).map(([dept, count]) => ({
+      dept,
+      score: 0, // unused — see department tab
+      count,
+    }));
     setDepartmentScores(depts);
 
     setLoading(false);
@@ -207,19 +198,19 @@ export default function AnalyticsPage() {
     ? Math.round((lowScoreResponses / scaleAnswers.length) * 100)
     : 0;
 
-  function exportCSV() {
-    const scaleQIds = new Set(allQuestions.filter((q) => q.type === "scale").map((q) => q.id));
-    const rows = [["response_id", "survey_id", "submitted_at", ...allQuestions.map((q) => q.text)]];
-    allResponses.forEach((r) => {
-      rows.push([
-        r.id,
-        r.survey_id,
-        r.submitted_at,
-        ...allQuestions.map((q) => String(r.answers[q.id] ?? "")),
-      ]);
-    });
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+  async function exportCSV() {
+    // Tier check is enforced server-side in /api/export/csv — the UI gate alone
+    // is bypassable by calling this function from DevTools.
+    const res = await fetch("/api/export/csv", { method: "GET", credentials: "include" });
+    if (res.status === 403) {
+      alert("CSV export requires a Growth or Enterprise plan.");
+      return;
+    }
+    if (!res.ok) {
+      alert("Export failed. Please try again.");
+      return;
+    }
+    const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -320,14 +311,16 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardContent className="p-5">
-                <p className="text-xs text-gray-500 font-medium mb-2">eNPS Score</p>
+                <p className="text-xs text-gray-500 font-medium mb-1">Pulse Score Index</p>
+                <p className="text-xs text-gray-400 mb-2">(high scorers minus low scorers)</p>
                 <p className={`text-3xl font-bold ${enps >= 30 ? "text-emerald-500" : enps >= 0 ? "text-violet-600" : "text-red-500"}`}>
                   {enps >= 0 ? "+" : ""}{enps}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">promoters minus detractors</p>
+                <p className="text-xs text-gray-400 mt-1">scores ≥9 minus scores ≤6, as %</p>
                 <Badge variant={enps >= 30 ? "success" : enps >= 0 ? "warning" : "destructive"} className="mt-2 text-xs">
                   {enps >= 50 ? "Excellent" : enps >= 30 ? "Good" : enps >= 0 ? "Fair" : "Poor"}
                 </Badge>
+                <p className="text-xs text-gray-400 mt-2 leading-relaxed">Not a standard eNPS — requires a dedicated "recommend" question for that.</p>
               </CardContent>
             </Card>
           </div>
@@ -409,7 +402,7 @@ export default function AnalyticsPage() {
             <TabsContent value="departments">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Engagement by Department</CardTitle>
+                  <CardTitle className="text-base">Employees by Department</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {departmentScores.length === 0 ? (
@@ -418,32 +411,32 @@ export default function AnalyticsPage() {
                     </p>
                   ) : (
                     <>
-                      <ResponsiveContainer width="100%" height={Math.max(200, departmentScores.length * 52)}>
-                        <BarChart data={departmentScores} layout="vertical">
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                          <YAxis dataKey="dept" type="category" tick={{ fontSize: 12, fill: "#374151" }} axisLine={false} tickLine={false} width={90} />
-                          <Tooltip
-                            contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
-                            formatter={(value) => [`${value}%`, "Engagement"]}
-                          />
-                          <Bar dataKey="score" radius={[0, 4, 4, 0]}>
-                            {departmentScores.map((entry, i) => (
-                              <Cell key={i} fill={entry.score >= 75 ? "#10b981" : entry.score >= 60 ? "#7c3aed" : "#f59e0b"} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                      <div className="mt-4 space-y-2">
-                        {departmentScores.filter((d) => d.score < 65).map((d) => (
-                          <div key={d.dept} className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 text-sm">
-                            <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                            <span className="text-amber-800 dark:text-amber-300">
-                              <strong>{d.dept}</strong> engagement is at {d.score}% — consider a dedicated check-in.
-                            </span>
-                          </div>
-                        ))}
+                      <div className="mb-5 p-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-sm text-blue-800 dark:text-blue-300">
+                        <strong>Why no per-department scores?</strong> Survey responses are fully anonymous — no employee identity is linked to any answer. Computing a "department score" would require knowing which respondent belongs to which department, which would break anonymity. The chart below shows headcount distribution only.
                       </div>
+                      <div className="space-y-3">
+                        {departmentScores
+                          .sort((a, b) => b.count - a.count)
+                          .map((d) => {
+                            const maxCount = Math.max(...departmentScores.map((x) => x.count));
+                            const pct = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
+                            return (
+                              <div key={d.dept} className="flex items-center gap-4">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-200 w-28 truncate flex-shrink-0">{d.dept}</span>
+                                <div className="flex-1 bg-gray-100 dark:bg-white/10 rounded-full h-3">
+                                  <div
+                                    className="h-3 rounded-full bg-violet-500"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                                <span className="text-sm text-gray-500 w-20 text-right flex-shrink-0">
+                                  {d.count} employee{d.count !== 1 ? "s" : ""}
+                                </span>
+                              </div>
+                            );
+                          })}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-4 text-center">{totalEmployees} active employees across {departmentScores.length} departments</p>
                     </>
                   )}
                 </CardContent>
@@ -554,7 +547,7 @@ export default function AnalyticsPage() {
                         [
                           avgResponseRate < 50 && { tip: "Response rate is low — send a reminder to employees.", action: "Go to surveys →", href: "/surveys" },
                           currentScore < 60 && { tip: "Engagement is below 60%. Create a new pulse survey to dig deeper.", action: "Create survey →", href: "/surveys/new" },
-                          enps < 0 && { tip: "Negative eNPS — detractors outweigh promoters. Review your employee list for disengaged team members.", action: "View employees →", href: "/employees" },
+                          enps < 0 && { tip: "Pulse Score Index is negative — low scorers outweigh high scorers. Consider a follow-up survey to understand disengagement.", action: "Create survey →", href: "/surveys/new" },
                           currentScore >= 75 && { tip: "Great engagement! Keep the momentum with consistent pulse checks.", action: "Create survey →", href: "/surveys/new" },
                         ] as (false | { tip: string; action: string; href: string })[]
                       ).filter(Boolean).map((item, i) => {
