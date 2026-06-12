@@ -142,6 +142,43 @@ create table if not exists slack_integrations (
   created_at      timestamptz default now()
 );
 
+-- ── RATE LIMITS (serverless-safe, keyed by hashed IP) ────────
+-- Stores request counts per IP window. No user data — service role only.
+create table if not exists rate_limits (
+  ip_hash  text primary key,
+  count    int not null default 1,
+  reset_at timestamptz not null
+);
+
+-- Atomic upsert: increments counter or resets if window has expired.
+-- Returns the NEW count so the caller can decide to allow/block.
+create or replace function increment_rate_limit(
+  p_ip_hash text,
+  p_reset_at timestamptz,
+  p_max int
+) returns int language plpgsql security definer as $$
+declare
+  v_count int;
+begin
+  insert into rate_limits (ip_hash, count, reset_at)
+  values (p_ip_hash, 1, p_reset_at)
+  on conflict (ip_hash) do update
+    set count    = case
+                     when rate_limits.reset_at <= now() then 1
+                     else least(rate_limits.count + 1, p_max + 1)
+                   end,
+        reset_at = case
+                     when rate_limits.reset_at <= now() then p_reset_at
+                     else rate_limits.reset_at
+                   end
+  returning count into v_count;
+  return v_count;
+end;
+$$;
+
+-- No RLS policies for rate_limits — service role only access.
+alter table rate_limits enable row level security;
+
 -- ── API KEYS (Enterprise) ────────────────────────────────────
 create table if not exists api_keys (
   id           uuid default gen_random_uuid() primary key,
@@ -175,7 +212,8 @@ create policy "questions_own"   on questions          for all using (survey_id i
 -- Public users have no direct table access; owners can read their own tokens.
 create policy "tokens_own"      on survey_tokens      for all    using (survey_id in (select id from surveys where workspace_id = auth.uid()));
 create policy "responses_read"  on responses          for select using (survey_id in (select id from surveys where workspace_id = auth.uid()));
-create policy "responses_insert" on responses         for insert with check (true);
+-- No responses_insert policy: public cannot insert directly via anon key.
+-- Submissions go through POST /api/survey/submit which uses the service role (bypasses RLS).
 create policy "audit_own"       on audit_logs         for all using (workspace_id = auth.uid());
 create policy "slack_own"       on slack_integrations for all using (workspace_id = auth.uid());
 create policy "apikeys_own"     on api_keys           for all using (workspace_id = auth.uid());

@@ -1,21 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Simple in-memory rate limiter: max 5 submissions per IP per 10 minutes.
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+// Hash the IP so raw addresses are never stored in the DB.
+async function hashIp(ip: string): Promise<string> {
+  const data = new TextEncoder().encode(ip + (process.env.CRON_SECRET ?? "salt"));
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+}
+
+// Serverless-safe: persists across Vercel function instances via DB.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
+  try {
+    const ipHash = await hashIp(ip);
+    const resetAt = new Date(Date.now() + RATE_LIMIT_WINDOW_MS).toISOString();
+    const { data } = await supabase.rpc("increment_rate_limit", {
+      p_ip_hash: ipHash,
+      p_reset_at: resetAt,
+      p_max: RATE_LIMIT_MAX,
+    });
+    const count = typeof data === "number" ? data : Number(data);
+    return count <= RATE_LIMIT_MAX;
+  } catch {
+    // If rate limit DB call fails, allow the request rather than blocking all submissions.
     return true;
   }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
 }
 
 export async function POST(request: NextRequest) {
@@ -24,13 +36,6 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     request.headers.get("x-real-ip") ??
     "unknown";
-
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json(
-      { error: "Too many submissions. Please wait a few minutes." },
-      { status: 429 }
-    );
-  }
 
   let token: string;
   let answers: Record<string, string | number>;
@@ -55,6 +60,14 @@ export async function POST(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+
+  // Rate limit check — DB-backed so it works across serverless instances
+  if (!(await checkRateLimit(supabase, ip))) {
+    return NextResponse.json(
+      { error: "Too many submissions. Please wait a few minutes." },
+      { status: 429 }
+    );
+  }
 
   // Validate token — re-check all conditions atomically before inserting
   const { data: tokenRow, error: tokenError } = await supabase
