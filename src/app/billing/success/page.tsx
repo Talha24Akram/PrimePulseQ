@@ -64,7 +64,7 @@ export default function BillingSuccessPage() {
               </p>
             )}
             <p className="text-xs text-gray-400 mb-8">
-              A receipt has been sent to your email by Stripe.
+              A receipt has been sent to your email by Paddle.
             </p>
             <Link href="/dashboard">
               <Button size="lg" className="gap-2 w-full sm:w-auto px-10">

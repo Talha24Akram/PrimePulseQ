@@ -167,12 +167,15 @@ export default function SurveysPage() {
       {/* Survey list */}
       <div className="space-y-3">
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-gray-400 animate-fade-up">
             {surveys.length === 0 ? (
               <>
-                <p className="text-lg font-medium mb-1">No surveys yet</p>
-                <p className="text-sm mb-4">Create your first survey to start collecting employee feedback.</p>
-                <Link href="/surveys/new"><Button>Create your first survey</Button></Link>
+                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-violet-600/25">
+                  <Plus className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-1">No surveys yet</p>
+                <p className="text-sm mb-5">Create your first survey to start collecting employee feedback.</p>
+                <Link href="/surveys/new"><Button className="gap-2"><Plus className="h-4 w-4" />Create your first survey</Button></Link>
               </>
             ) : (
               <>

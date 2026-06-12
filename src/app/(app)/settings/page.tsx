@@ -582,7 +582,7 @@ function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; 
               {openingPortal ? "Opening portal…" : "Manage subscription"}
             </Button>
             <p className="text-xs text-gray-400 mt-2">
-              Update payment method, view invoices, or cancel — all via Stripe&apos;s secure portal.
+              Update payment method, view invoices, or cancel — all via Paddle&apos;s secure portal.
             </p>
           </CardContent>
         )}

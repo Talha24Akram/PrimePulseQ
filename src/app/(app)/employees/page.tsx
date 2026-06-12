@@ -76,7 +76,7 @@ export default function EmployeesPage() {
     setAddError("");
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setAddError("Session expired. Please sign in again."); setAdding(false); return; }
 
     const { error } = await supabase.from("employees").insert({
       workspace_id: user.id,
@@ -137,10 +137,20 @@ export default function EmployeesPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const rows = lines.slice(1).map((line) => {
+    let rows = lines.slice(1).map((line) => {
       const [name, email, department, role] = line.split(",").map((s) => s.trim().replace(/^"|"$/g, ""));
       return { workspace_id: user.id, email, name: name || null, department: department || null, role: role || null };
-    }).filter((r) => r.email);
+    }).filter((r) => r.email && r.email.includes("@"));
+
+    // Enforce the plan's employee limit on imports too
+    if (!isOwner && limit !== Infinity) {
+      const remaining = Math.max(0, limit - activeCount);
+      if (rows.length > remaining) {
+        alert(`Your ${TIER_LABELS[tier]} plan allows ${limit} active employees. Importing the first ${remaining} of ${rows.length} rows.`);
+        rows = rows.slice(0, remaining);
+      }
+      if (rows.length === 0) { e.target.value = ""; return; }
+    }
 
     await supabase.from("employees").upsert(rows, { onConflict: "workspace_id,email" });
     await logAudit("employee.imported", { metadata: { count: rows.length } });
