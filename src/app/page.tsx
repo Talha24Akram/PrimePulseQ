@@ -19,7 +19,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 overflow-x-hidden">
       {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-gray-200/70 dark:border-white/8 bg-gray-50/80 dark:bg-gray-950/80 glass">
+      <nav className="sticky top-0 z-50 border-b border-gray-200/70 dark:border-white/8 bg-white/80 dark:bg-gray-950/80 glass">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="PrimePulseQ" className="h-8 w-8 object-contain" />
@@ -189,7 +189,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section id="features" className="relative py-16 sm:py-24 px-4 sm:px-6 bg-gray-100/80 dark:bg-white/3">
+      <section id="features" className="relative py-16 sm:py-24 px-4 sm:px-6 bg-gray-50/80 dark:bg-white/3">
         <div className="mx-auto max-w-5xl">
           <div className="text-center mb-10 sm:mb-16">
             <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3 sm:mb-4">
@@ -252,7 +252,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing preview */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gray-100/80 dark:bg-white/3">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gray-50/80 dark:bg-white/3">
         <div className="mx-auto max-w-4xl text-center">
           <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3 sm:mb-4">Simple, honest pricing</h2>
           <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400 mb-10 sm:mb-12">No per-seat gotchas. No feature gates that kill momentum.</p>

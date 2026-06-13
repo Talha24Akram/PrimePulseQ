@@ -7,12 +7,13 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Download, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Download, BarChart3, Sparkles, Lightbulb, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getEngagementColor, getEngagementLabel } from "@/lib/utils";
+import { generateInsights, generateActionPlan, type InsightSeverity } from "@/lib/insights";
 import { createClient } from "@/lib/supabase/client";
 
 interface WeekPoint { week: string; score: number; responseRate: number; }
@@ -198,6 +199,27 @@ export default function AnalyticsPage() {
     ? Math.round((lowScoreResponses / scaleAnswers.length) * 100)
     : 0;
 
+  // ── Rule-based insights + action plan ────────────────────────
+  // Pure functions in @/lib/insights — swap to AI generation later (see TODO there).
+  const insightInput = {
+    currentScore,
+    previousScore: prevScore,
+    avgResponseRate,
+    burnoutPct,
+    pulseIndex: enps,
+    totalResponses,
+    totalEmployees,
+  };
+  const insights = generateInsights(insightInput);
+  const actionPlan = generateActionPlan(insightInput);
+
+  const severityStyles: Record<InsightSeverity, { icon: typeof Sparkles; box: string; text: string; iconColor: string }> = {
+    positive: { icon: CheckCircle2, box: "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20", text: "text-emerald-800 dark:text-emerald-300", iconColor: "text-emerald-500" },
+    info: { icon: Sparkles, box: "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20", text: "text-blue-800 dark:text-blue-300", iconColor: "text-blue-500" },
+    warning: { icon: AlertTriangle, box: "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20", text: "text-amber-800 dark:text-amber-300", iconColor: "text-amber-500" },
+    critical: { icon: AlertTriangle, box: "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20", text: "text-red-800 dark:text-red-300", iconColor: "text-red-500" },
+  };
+
   async function exportCSV() {
     // Tier check is enforced server-side in /api/export/csv — the UI gate alone
     // is bypassable by calling this function from DevTools.
@@ -259,11 +281,23 @@ export default function AnalyticsPage() {
       ) : !hasData ? (
         <Card>
           <CardContent className="p-16 text-center">
-            <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-lg font-medium text-gray-500 mb-1">No data yet</p>
-            <p className="text-sm text-gray-400">
-              Analytics will appear once you have active surveys with responses.
+            <div className="h-14 w-14 rounded-2xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
+              <BarChart3 className="h-7 w-7 text-violet-500" />
+            </div>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">No analytics data yet</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
+              Insights, trends, and your action plan appear here once employees start responding to an active survey.
             </p>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <Button onClick={() => router.push("/surveys/new")} className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Create your first survey
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/employees")} className="gap-2">
+                Add employees
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -321,6 +355,69 @@ export default function AnalyticsPage() {
                   {enps >= 50 ? "Excellent" : enps >= 30 ? "Good" : enps >= 0 ? "Fair" : "Poor"}
                 </Badge>
                 <p className="text-xs text-gray-400 mt-2 leading-relaxed">Not a standard eNPS — requires a dedicated "recommend" question for that.</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Insights + Action Plan */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </div>
+                  <CardTitle className="text-base">Insights</CardTitle>
+                  <Badge variant="secondary" className="text-[10px]">Auto-generated</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {insights.map((ins) => {
+                  const s = severityStyles[ins.severity];
+                  const Icon = s.icon;
+                  return (
+                    <div key={ins.id} className={`flex items-start gap-3 p-3 rounded-lg border ${s.box}`}>
+                      <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${s.iconColor}`} />
+                      <div>
+                        <p className={`text-sm font-semibold ${s.text}`}>{ins.title}</p>
+                        <p className={`text-xs mt-0.5 leading-relaxed ${s.text} opacity-90`}>{ins.detail}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                    <Lightbulb className="h-4 w-4 text-white" />
+                  </div>
+                  <CardTitle className="text-base">Suggested Action Plan</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {actionPlan.map((action, i) => (
+                  <div key={action.id} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/8">
+                    <div className="h-5 w-5 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{action.title}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{action.detail}</p>
+                      {action.href && action.cta && (
+                        <button
+                          onClick={() => router.push(action.href!)}
+                          className="inline-flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 font-medium mt-1.5 hover:underline"
+                        >
+                          {action.cta}
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>

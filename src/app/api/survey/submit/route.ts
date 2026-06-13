@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+// TODO(rate-limit): This is a DB-backed counter (works across serverless
+// instances) but not a true distributed sliding-window limiter. For higher
+// scale, move to Redis / Upstash with a sliding-window or token-bucket algorithm.
+// TODO(tests): Add an integration test that exercises this route end-to-end
+// (valid token submit, reused token, expired token, rate-limit exhaustion).
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
@@ -98,6 +103,11 @@ export async function POST(request: NextRequest) {
   if (!survey || survey.status !== "active") {
     return NextResponse.json({ error: "This survey is no longer accepting responses" }, { status: 410 });
   }
+
+  // TODO(atomic-submit): The insert + mark-used below are two sequential calls,
+  // not one transaction. A crash between them could leave a response saved with
+  // the token still unused (allowing a duplicate). Move both into a single
+  // Postgres RPC/transaction (SECURITY DEFINER) so submit is atomic.
 
   // Insert anonymous response — no employee_id, just survey_id and answers
   const { error: insertError } = await supabase.from("responses").insert({

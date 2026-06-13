@@ -269,9 +269,30 @@ export default function EmployeesPage() {
       {/* Employee list */}
       <Card>
         {filtered.length === 0 ? (
-          <div className="p-12 text-center text-gray-400 text-sm">
-            {employees.length === 0 ? "No employees yet. Add your first employee or import a CSV." : "No employees match your filter."}
-          </div>
+          employees.length === 0 ? (
+            <div className="p-12 sm:p-16 text-center">
+              <div className="h-14 w-14 rounded-2xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
+                <UserCheck className="h-7 w-7 text-violet-500" />
+              </div>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">No employees yet</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
+                Add your team so you can send anonymous pulse surveys. Import a CSV for bulk setup, or add people one at a time.
+              </p>
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <Button onClick={() => { setAddError(""); setShowAdd(true); }} disabled={atLimit} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add your first employee
+                </Button>
+                <label className={`inline-flex items-center gap-2 px-4 h-10 rounded-lg border border-gray-300 dark:border-white/10 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 cursor-pointer transition-colors ${atLimit ? "opacity-50 pointer-events-none" : ""}`}>
+                  <Upload className="h-4 w-4" />
+                  Import CSV
+                  <input type="file" accept=".csv" className="hidden" onChange={handleCSVImport} disabled={atLimit} />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="p-12 text-center text-gray-400 text-sm">No employees match your filter.</div>
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">

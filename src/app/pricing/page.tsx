@@ -164,7 +164,7 @@ export default function PricingPage() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24 px-6 bg-gray-100 dark:bg-white/3">
+      <section className="py-24 px-6 bg-gray-50 dark:bg-white/3">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-12">Frequently asked questions</h2>
           <div className="space-y-6">
