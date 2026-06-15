@@ -3,7 +3,7 @@
 // Real Postgres integration test using PGlite (Postgres compiled to WASM).
 // Applies the actual migration files from supabase/migrations and exercises
 // the atomic submit RPC and the sliding-window rate limiter against a live DB.
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -36,7 +36,21 @@ beforeAll(async () => {
   await db.exec(migration("20260101000001_rate_limiting.sql"));
   await db.exec(migration("20260615000000_atomic_submit_response.sql"));
   await db.exec(migration("20260615000001_sliding_window_rate_limit.sql"));
+  await db.exec(migration("20260615000002_claim_owner.sql"));
 }, 60000);
+
+async function newUser(): Promise<string> {
+  return (await db.query<{ id: string }>(
+    `insert into auth.users (email) values ($1) returning id`,
+    [`u${Math.random()}@x.com`]
+  )).rows[0].id;
+}
+
+async function claimOwner(userId: string): Promise<string> {
+  return (await db.query<{ claim_owner: string }>(
+    `select claim_owner($1) as claim_owner`, [userId]
+  )).rows[0].claim_owner;
+}
 
 // ── helpers ──────────────────────────────────────────────────
 async function seedSurvey(opts: { status?: string } = {}) {
@@ -162,5 +176,40 @@ describe("check_rate_limit_sliding", () => {
     // Wait past the 1s window so all events age out.
     await new Promise((r) => setTimeout(r, 1100));
     expect(await check(ip, 1)).toBe(1); // capacity restored
+  });
+});
+
+// ── #9 owner bootstrap ───────────────────────────────────────
+describe("claim_owner", () => {
+  // Ownership is global per-DB; reset before each case for determinism.
+  beforeEach(async () => {
+    await db.query(`update profiles set is_owner = false where is_owner = true`);
+  });
+
+  it("promotes the first caller to owner + enterprise", async () => {
+    const u = await newUser();
+    expect(await claimOwner(u)).toBe("ok");
+    const row = (await db.query<{ is_owner: boolean; subscription_tier: string }>(
+      `select is_owner, subscription_tier from profiles where id = $1`, [u]
+    )).rows[0];
+    expect(row.is_owner).toBe(true);
+    expect(row.subscription_tier).toBe("enterprise");
+  });
+
+  it("is idempotent for the same owner", async () => {
+    const u = await newUser();
+    expect(await claimOwner(u)).toBe("ok");
+    expect(await claimOwner(u)).toBe("already_owner");
+  });
+
+  it("refuses to promote a second user once an owner exists", async () => {
+    const first = await newUser();
+    expect(await claimOwner(first)).toBe("ok");
+    const second = await newUser();
+    expect(await claimOwner(second)).toBe("already_configured");
+    const isOwner = (await db.query<{ is_owner: boolean }>(
+      `select is_owner from profiles where id = $1`, [second]
+    )).rows[0].is_owner;
+    expect(isOwner).toBe(false);
   });
 });
