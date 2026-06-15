@@ -1,5 +1,17 @@
 import { Environment, Paddle } from "@paddle/paddle-node-sdk";
 
+// Loud guard: running a real production deploy against Paddle's sandbox means
+// billing silently doesn't work. Warn rather than default quietly.
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.PADDLE_ENVIRONMENT !== "production"
+) {
+  console.warn(
+    "[paddle] NODE_ENV=production but PADDLE_ENVIRONMENT is not 'production' — " +
+      "billing is pointed at the Paddle sandbox. Set PADDLE_ENVIRONMENT=production for live billing."
+  );
+}
+
 // Singleton Paddle client (server-side only)
 export const paddle = new Paddle(process.env.PADDLE_API_KEY ?? "placeholder", {
   environment:

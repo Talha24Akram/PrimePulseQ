@@ -41,6 +41,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260615000006_survey_i18n.sql` | `employees.locale` + `surveys.translations` for multi-language surveys |
 | `20260615000007_benchmarks.sql` | `benchmark_snapshots` + `profiles.industry`/`headcount_band` + `get_benchmark()` |
 | `20260616000000_benchmark_hardening.sql` | `count_completed_cycles()` + `profiles.industry` check constraint |
+| `20260616000001_responses_index.sql` | index on `responses(survey_id)` |
 
 ## One-time setup after first deploy
 

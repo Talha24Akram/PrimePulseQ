@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { blockCrossSite } from "@/lib/csrf";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
@@ -12,6 +13,8 @@ import { cookies } from "next/headers";
 // could claim ownership. The DB-level one-time guard in claim_owner() is the
 // second layer; this secret is the first.
 export async function POST(request: NextRequest) {
+  const csrf = blockCrossSite(request);
+  if (csrf) return csrf;
   try {
     const setupSecret = process.env.SETUP_SECRET;
     if (!setupSecret) {

@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { paddle, getPriceIdFromTier } from "@/lib/paddle";
+import { blockCrossSite } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
+  const csrf = blockCrossSite(request);
+  if (csrf) return csrf;
   try {
     const { tier } = await request.json();
 

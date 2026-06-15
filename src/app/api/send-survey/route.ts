@@ -7,8 +7,11 @@ import { notifyWebhooks } from "@/lib/webhooks";
 import { escapeHtml } from "@/lib/utils";
 import { resolveFromEmail } from "@/lib/email";
 import { getStrings, normalizeLocale, isRtl } from "@/lib/locales";
+import { blockCrossSite } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
+  const csrf = blockCrossSite(request);
+  if (csrf) return csrf;
   try {
     const { surveyId, employeeIds } = await request.json();
 

@@ -1,11 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { blockCrossSite } from "@/lib/csrf";
 
 // Permanently deletes the user's workspace: all surveys, questions,
 // responses, employees, audit logs, profile, and the auth user itself.
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const csrf = blockCrossSite(request);
+  if (csrf) return csrf;
   try {
     // Auth check
     const cookieStore = await cookies();

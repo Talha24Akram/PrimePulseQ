@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { rateLimitOk, getClientIp } from "@/lib/rate-limit";
 
 // TODO(rate-limit): DB-backed sliding-window counter (works across serverless
@@ -8,27 +9,30 @@ import { rateLimitOk, getClientIp } from "@/lib/rate-limit";
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 
+// Caps on untrusted public input so a single submission can't store a huge
+// payload (max 200 answers; keys ≤ 64 chars; text answers ≤ 5000 chars).
+const SubmitSchema = z.object({
+  token: z.string().regex(/^[0-9a-f-]{36}$/i, "Invalid token"),
+  answers: z
+    .record(z.string().max(64), z.union([z.string().max(5000), z.number()]))
+    .refine((a) => Object.keys(a).length <= 200, "Too many answers"),
+});
+
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
 
-  let token: string;
-  let answers: Record<string, string | number>;
-
+  let body: unknown;
   try {
-    const body = await request.json();
-    token = body.token;
-    answers = body.answers;
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  if (!token || typeof token !== "string" || !token.match(/^[0-9a-f-]{36}$/i)) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 400 });
+  const parsed = SubmitSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
   }
-
-  if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
-    return NextResponse.json({ error: "Invalid answers" }, { status: 400 });
-  }
+  const { token, answers } = parsed.data;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

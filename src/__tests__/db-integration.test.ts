@@ -43,6 +43,7 @@ beforeAll(async () => {
   await db.exec(migration("20260615000006_survey_i18n.sql"));
   await db.exec(migration("20260615000007_benchmarks.sql"));
   await db.exec(migration("20260616000000_benchmark_hardening.sql"));
+  await db.exec(migration("20260616000001_responses_index.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
