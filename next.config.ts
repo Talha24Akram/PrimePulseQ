@@ -11,31 +11,8 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // Limit browser feature access
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      // Default: only same origin
-      "default-src 'self'",
-      // Scripts: self + Next.js inline scripts (needed for hydration)
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.paddle.com",
-      // Styles: self + inline (Tailwind inline styles)
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      // Fonts
-      "font-src 'self' https://fonts.gstatic.com",
-      // Images: self + data URIs (avatars) + Supabase storage
-      "img-src 'self' data: https://*.supabase.co",
-      // XHR/fetch: self + Supabase + Paddle
-      "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.paddle.com https://sandbox-api.paddle.com",
-      // Frames: Paddle checkout iframe
-      "frame-src https://cdn.paddle.com https://buy.paddle.com https://sandbox-buy.paddle.com",
-      // Block all object embeds
-      "object-src 'none'",
-      // Only allow HTTPS base URIs
-      "base-uri 'self'",
-      // Forms only submit to same origin
-      "form-action 'self'",
-    ].join("; "),
-  },
+  // NOTE: Content-Security-Policy is set per-request in src/middleware.ts so it
+  // can carry a nonce (avoids 'unsafe-inline'/'unsafe-eval' for scripts).
 ];
 
 const nextConfig: NextConfig = {

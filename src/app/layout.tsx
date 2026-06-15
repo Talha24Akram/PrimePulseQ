@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
@@ -18,7 +19,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Reading a request header opts every route into dynamic rendering, which is
+  // required for the per-request CSP nonce (set in proxy.ts) to be applied to
+  // Next's scripts. Without this, statically-prerendered pages ship without a
+  // nonce and their inline scripts would be blocked by the CSP.
+  await headers();
+
   return (
     <html lang="en" data-theme="dark" className={`h-full antialiased ${inter.variable}`}>
       <body className="min-h-full">

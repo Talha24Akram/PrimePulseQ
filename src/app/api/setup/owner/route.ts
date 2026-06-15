@@ -7,20 +7,29 @@ import { cookies } from "next/headers";
 // owner, but only if no owner exists yet (enforced atomically by the
 // claim_owner() RPC). Replaces the manual "run this SQL" step.
 //
-// Optional hardening: if SETUP_SECRET is set, the request must include a
-// matching `secret` — useful on public deployments so a random first signup
-// can't grab ownership.
+// Fail-closed: SETUP_SECRET MUST be configured and the request MUST include a
+// matching `secret`. Without this, a random first signup on a public deploy
+// could claim ownership. The DB-level one-time guard in claim_owner() is the
+// second layer; this secret is the first.
 export async function POST(request: NextRequest) {
   try {
+    const setupSecret = process.env.SETUP_SECRET;
+    if (!setupSecret) {
+      console.error("SETUP_SECRET is not set — owner bootstrap route is disabled");
+      return NextResponse.json(
+        { error: "Owner setup is not enabled. Set SETUP_SECRET to use this route." },
+        { status: 403 }
+      );
+    }
+
     let body: { secret?: string } = {};
     try {
       body = await request.json();
     } catch {
-      // empty body is allowed when SETUP_SECRET is not configured
+      // fall through — missing/empty body fails the secret check below
     }
 
-    const setupSecret = process.env.SETUP_SECRET;
-    if (setupSecret && body.secret !== setupSecret) {
+    if (body.secret !== setupSecret) {
       return NextResponse.json({ error: "Invalid setup secret" }, { status: 403 });
     }
 

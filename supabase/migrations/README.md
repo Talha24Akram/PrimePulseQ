@@ -44,12 +44,13 @@ while authenticated:
 
 ```
 POST /api/setup/owner
-# If SETUP_SECRET is configured, send: { "secret": "<SETUP_SECRET>" }
+# Body: { "secret": "<SETUP_SECRET>" }   (the route is disabled unless SETUP_SECRET is set)
 ```
 
 It promotes only the first caller (via the `claim_owner()` RPC) and refuses once
 an owner exists, so it's safe to call and can't be used twice to hijack
-ownership.
+ownership. The required `SETUP_SECRET` is the first line of defense; the DB-level
+one-time guard is the second.
 
 Manual fallback (equivalent, replace the email):
 
