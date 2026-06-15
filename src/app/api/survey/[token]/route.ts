@@ -84,16 +84,23 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     text: translateQuestion(translations, q.id, q.text, locale),
   }));
 
-  return NextResponse.json({
-    id: survey.id,
-    title: (locale !== "en" && meta?.title) || survey.title,
-    description: (locale !== "en" && meta?.description) || survey.description,
-    company_name: profile?.company_name ?? "Your Company",
-    locale,
-    dir: isRtl(locale) ? "rtl" : "ltr",
-    strings: serializeStrings(locale),
-    questions: localizedQuestions,
-  });
+  return NextResponse.json(
+    {
+      id: survey.id,
+      title: (locale !== "en" && meta?.title) || survey.title,
+      description: (locale !== "en" && meta?.description) || survey.description,
+      company_name: profile?.company_name ?? "Your Company",
+      locale,
+      dir: isRtl(locale) ? "rtl" : "ltr",
+      strings: serializeStrings(locale),
+      questions: localizedQuestions,
+    },
+    {
+      // Survey questions don't change once sent — cache briefly per client so
+      // navigating back is instant on mobile. Private (token-scoped, not shared).
+      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=600" },
+    }
+  );
 }
 
 // SurveyStrings contains functions; serialize the static + resolved values the

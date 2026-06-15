@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { rateLimitOk, getClientIp } from "@/lib/rate-limit";
-import { blockCrossSite } from "@/lib/csrf";
+import { blockCrossSite, requireJson } from "@/lib/csrf";
 
 const BodySchema = z.object({ currentScore: z.number().min(0).max(100) });
 
@@ -19,6 +19,8 @@ function mondayOf(d: Date): string {
 export async function POST(request: NextRequest) {
   const csrf = blockCrossSite(request);
   if (csrf) return csrf;
+  const ct = requireJson(request);
+  if (ct) return ct;
 
   // Auth
   const cookieStore = await cookies();

@@ -4,13 +4,15 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Tier } from "@/lib/tiers";
-import { blockCrossSite } from "@/lib/csrf";
+import { blockCrossSite, requireJson } from "@/lib/csrf";
 
 const VALID_TIERS: Tier[] = ["free", "starter", "growth", "enterprise"];
 
 export async function POST(request: NextRequest) {
   const csrf = blockCrossSite(request);
   if (csrf) return csrf;
+  const ct = requireJson(request);
+  if (ct) return ct;
   try {
     const { tier } = await request.json();
 

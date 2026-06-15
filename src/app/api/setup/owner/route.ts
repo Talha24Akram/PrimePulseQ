@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { blockCrossSite } from "@/lib/csrf";
+import { blockCrossSite, requireJson } from "@/lib/csrf";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
@@ -16,6 +16,8 @@ import { cookies } from "next/headers";
 export async function POST(request: NextRequest) {
   const csrf = blockCrossSite(request);
   if (csrf) return csrf;
+  const ct = requireJson(request);
+  if (ct) return ct;
   try {
     const setupSecret = process.env.SETUP_SECRET;
     if (!setupSecret) {

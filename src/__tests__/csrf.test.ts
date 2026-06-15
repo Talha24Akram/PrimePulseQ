@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
-import { blockCrossSite } from "@/lib/csrf";
+import { blockCrossSite, requireJson } from "@/lib/csrf";
 
 function req(headers: Record<string, string>): Request {
   return new Request("https://app.example.com/api/x", { method: "POST", headers });
@@ -38,5 +38,20 @@ describe("blockCrossSite", () => {
   it("rejects an unparseable Origin", () => {
     const res = blockCrossSite(req({ origin: "not-a-url" }));
     expect(res?.status).toBe(403);
+  });
+});
+
+describe("requireJson", () => {
+  it("allows application/json", () => {
+    expect(requireJson(req({ "content-type": "application/json" }))).toBeNull();
+  });
+  it("allows application/json with charset", () => {
+    expect(requireJson(req({ "content-type": "application/json; charset=utf-8" }))).toBeNull();
+  });
+  it("rejects missing Content-Type with 415", () => {
+    expect(requireJson(req({}))?.status).toBe(415);
+  });
+  it("rejects non-JSON Content-Type with 415", () => {
+    expect(requireJson(req({ "content-type": "text/plain" }))?.status).toBe(415);
   });
 });

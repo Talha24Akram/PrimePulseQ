@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { rateLimitOk, getClientIp } from "@/lib/rate-limit";
+import { requireJson } from "@/lib/csrf";
 
 // TODO(rate-limit): DB-backed sliding-window counter (works across serverless
 // instances). For very high scale, move to Redis / Upstash with a native
@@ -19,6 +20,9 @@ const SubmitSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const ct = requireJson(request);
+  if (ct) return ct;
+
   const ip = getClientIp(request);
 
   let body: unknown;

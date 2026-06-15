@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { blockCrossSite } from "@/lib/csrf";
+import { blockCrossSite, requireJson } from "@/lib/csrf";
 
 // Allowlist of trusted webhook hostnames — prevents SSRF to internal/cloud-metadata services.
 const ALLOWED_WEBHOOK_HOSTS = [
@@ -27,6 +27,8 @@ function isAllowedWebhookUrl(raw: string): boolean {
 export async function POST(request: NextRequest) {
   const csrf = blockCrossSite(request);
   if (csrf) return csrf;
+  const ct = requireJson(request);
+  if (ct) return ct;
 
   const cookieStore = await cookies();
   const supabase = createServerClient(

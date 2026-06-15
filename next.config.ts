@@ -11,7 +11,8 @@ const securityHeaders = [
   // Restrict referrer to same-origin so employee emails don't leak to third parties
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // Limit browser feature access
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Lock down browser features; allow payment for Paddle's checkout iframe.
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(self)" },
   // NOTE: Content-Security-Policy is set per-request in src/middleware.ts so it
   // can carry a nonce (avoids 'unsafe-inline'/'unsafe-eval' for scripts).
 ];

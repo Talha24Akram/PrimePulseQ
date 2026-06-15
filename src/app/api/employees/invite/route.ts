@@ -5,11 +5,13 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { escapeHtml } from "@/lib/utils";
 import { resolveFromEmail } from "@/lib/email";
-import { blockCrossSite } from "@/lib/csrf";
+import { blockCrossSite, requireJson } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
   const csrf = blockCrossSite(request);
   if (csrf) return csrf;
+  const ct = requireJson(request);
+  if (ct) return ct;
   try {
     const { employeeEmail, employeeName, companyName, adminEmail } = await request.json();
 

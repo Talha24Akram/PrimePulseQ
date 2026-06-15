@@ -31,3 +31,13 @@ export function blockCrossSite(req: Request): NextResponse | null {
 
   return null;
 }
+
+// Reject requests that don't declare a JSON body. Returns a 415 response or null.
+// Do NOT use on routes that read raw bodies (e.g. the Paddle webhook).
+export function requireJson(req: Request): NextResponse | null {
+  const ct = req.headers.get("content-type");
+  if (!ct || !ct.includes("application/json")) {
+    return NextResponse.json({ error: "Content-Type must be application/json" }, { status: 415 });
+  }
+  return null;
+}
