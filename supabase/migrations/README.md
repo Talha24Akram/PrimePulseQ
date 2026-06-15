@@ -40,6 +40,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260615000005_question_library_and_templates.sql` | question library + survey templates (+ 6 starters) + RLS |
 | `20260615000006_survey_i18n.sql` | `employees.locale` + `surveys.translations` for multi-language surveys |
 | `20260615000007_benchmarks.sql` | `benchmark_snapshots` + `profiles.industry`/`headcount_band` + `get_benchmark()` |
+| `20260616000000_benchmark_hardening.sql` | `count_completed_cycles()` + `profiles.industry` check constraint |
 
 ## One-time setup after first deploy
 

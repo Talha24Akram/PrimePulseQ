@@ -294,14 +294,17 @@ export default function AnalyticsPage() {
       .finally(() => { if (!cancelled) setAiLoading(false); });
 
     // Contribute this week's score (if eligible) and read cohort percentiles.
-    fetch("/api/benchmark", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentScore }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (!cancelled) setBenchmark(d); })
-      .catch(() => { if (!cancelled) setBenchmark(null); });
+    // Skip when there's no real score yet (0) to avoid storing an empty snapshot.
+    if (currentScore > 0) {
+      fetch("/api/benchmark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentScore }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (!cancelled) setBenchmark(d); })
+        .catch(() => { if (!cancelled) setBenchmark(null); });
+    }
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps

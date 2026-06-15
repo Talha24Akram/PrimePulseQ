@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { z } from "zod";
+import { rateLimitOk, getClientIp } from "@/lib/rate-limit";
 
 const BodySchema = z.object({ currentScore: z.number().min(0).max(100) });
 
@@ -43,25 +44,20 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // "3 completed survey cycles" = at least 3 of this workspace's surveys have
-  // received responses. Only then does the org contribute to the pool.
-  const { data: surveyRows } = await admin
-    .from("surveys")
-    .select("id")
-    .eq("workspace_id", user.id);
-  const surveyIds = (surveyRows ?? []).map((s) => s.id);
-  let completedCycles = 0;
-  if (surveyIds.length) {
-    const { data: respSurveys } = await admin
-      .from("responses")
-      .select("survey_id")
-      .in("survey_id", surveyIds);
-    completedCycles = new Set((respSurveys ?? []).map((r) => r.survey_id)).size;
+  // Rate limit — this route runs on every analytics load and does a write.
+  if (!(await rateLimitOk(admin, getClientIp(request), { max: 20, windowSeconds: 60 }))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
+
+  // "3 completed survey cycles" = at least 3 of this workspace's surveys have
+  // received responses (single distinct-count query).
+  const { data: cycles } = await admin.rpc("count_completed_cycles", { p_workspace: user.id });
+  const completedCycles = typeof cycles === "number" ? cycles : Number(cycles ?? 0);
   const eligible = completedCycles >= 3;
 
-  // Contribute this week's snapshot if eligible.
-  if (eligible) {
+  // Contribute this week's snapshot only when eligible AND there's real data
+  // (currentScore 0 is the "no responses yet" sentinel — never store it).
+  if (eligible && parsed.data.currentScore > 0) {
     await admin.from("benchmark_snapshots").upsert(
       {
         workspace_id: user.id,

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -163,29 +164,25 @@ function SettingsInner() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Industry</Label>
-                  <select
-                    value={company.industry}
-                    onChange={(e) => setCompany((p) => ({ ...p, industry: e.target.value }))}
-                    className="w-full h-10 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 text-sm text-gray-700 dark:text-gray-200"
-                  >
-                    <option value="">Select industry…</option>
-                    {["Technology","Healthcare","Finance","Retail","Manufacturing","Education","Hospitality","Professional Services","Non-profit","Other"].map((i) => (
-                      <option key={i} value={i}>{i}</option>
-                    ))}
-                  </select>
+                  <Select value={company.industry} onValueChange={(v) => setCompany((p) => ({ ...p, industry: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select industry…" /></SelectTrigger>
+                    <SelectContent>
+                      {["Technology","Healthcare","Finance","Retail","Manufacturing","Education","Hospitality","Professional Services","Non-profit","Other"].map((i) => (
+                        <SelectItem key={i} value={i}>{i}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Company size</Label>
-                  <select
-                    value={company.headcountBand}
-                    onChange={(e) => setCompany((p) => ({ ...p, headcountBand: e.target.value }))}
-                    className="w-full h-10 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 text-sm text-gray-700 dark:text-gray-200"
-                  >
-                    <option value="">Select size…</option>
-                    {["1-50","51-200","201-1000","1000+"].map((b) => (
-                      <option key={b} value={b}>{b} employees</option>
-                    ))}
-                  </select>
+                  <Select value={company.headcountBand} onValueChange={(v) => setCompany((p) => ({ ...p, headcountBand: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select size…" /></SelectTrigger>
+                    <SelectContent>
+                      {["1-50","51-200","201-1000","1000+"].map((b) => (
+                        <SelectItem key={b} value={b}>{b} employees</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <p className="text-xs text-gray-400">Used to anonymously benchmark your scores against similar companies.</p>

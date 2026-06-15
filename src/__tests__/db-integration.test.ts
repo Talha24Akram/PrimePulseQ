@@ -42,6 +42,7 @@ beforeAll(async () => {
   await db.exec(migration("20260615000005_question_library_and_templates.sql"));
   await db.exec(migration("20260615000006_survey_i18n.sql"));
   await db.exec(migration("20260615000007_benchmarks.sql"));
+  await db.exec(migration("20260616000000_benchmark_hardening.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
@@ -262,6 +263,33 @@ describe("get_benchmark", () => {
     const r = await getBenchmark("Retail", "1000+");
     expect(r.cohort_size).toBe(1);
     expect(r.p50).toBeNull();
+  });
+});
+
+describe("count_completed_cycles", () => {
+  it("counts distinct surveys that have at least one response", async () => {
+    const { surveyId, userId } = await seedSurvey(); // seedSurvey inserts 0 responses
+    // Survey 1: two responses → counts once.
+    await db.query(`insert into responses (survey_id, answers) values ($1, '{"q":1}'::jsonb)`, [surveyId]);
+    await db.query(`insert into responses (survey_id, answers) values ($1, '{"q":2}'::jsonb)`, [surveyId]);
+    // Survey 2: one response.
+    const s2 = (await db.query<{ id: string }>(`insert into surveys (workspace_id, title, status) values ($1,'S2','active') returning id`, [userId])).rows[0].id;
+    await db.query(`insert into responses (survey_id, answers) values ($1, '{"q":3}'::jsonb)`, [s2]);
+    // Survey 3: zero responses → does NOT count.
+    await db.query(`insert into surveys (workspace_id, title, status) values ($1,'S3','active')`, [userId]);
+
+    const r = await db.query<{ count_completed_cycles: number }>(
+      `select count_completed_cycles($1) as count_completed_cycles`, [userId]
+    );
+    expect(r.rows[0].count_completed_cycles).toBe(2);
+  });
+
+  it("returns 0 for a workspace with no responses", async () => {
+    const { userId } = await seedSurvey();
+    const r = await db.query<{ count_completed_cycles: number }>(
+      `select count_completed_cycles($1) as count_completed_cycles`, [userId]
+    );
+    expect(r.rows[0].count_completed_cycles).toBe(0);
   });
 });
 
