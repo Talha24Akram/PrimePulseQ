@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getEngagementColor, getEngagementLabel } from "@/lib/utils";
 import { generateInsights, generateActionPlan, type InsightSeverity } from "@/lib/insights";
+import type { AIInsight } from "@/lib/ai-insights";
 import { createClient } from "@/lib/supabase/client";
 
 interface WeekPoint { week: string; score: number; responseRate: number; }
@@ -52,6 +53,8 @@ export default function AnalyticsPage() {
   const [totalSurveys, setTotalSurveys] = useState(0);
   const [allResponses, setAllResponses] = useState<ResponseRow[]>([]);
   const [allQuestions, setAllQuestions] = useState<QuestionRow[]>([]);
+  const [aiInsight, setAiInsight] = useState<AIInsight | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -242,6 +245,25 @@ export default function AnalyticsPage() {
   }
 
   const hasData = engagementTrend.length > 0;
+
+  // Fetch AI insights once metrics are ready. The route falls back to the
+  // rule-based engine server-side if the Anthropic call is unavailable.
+  useEffect(() => {
+    if (loading || !hasData) return;
+    let cancelled = false;
+    setAiLoading(true);
+    fetch("/api/insights/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(insightInput),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: AIInsight | null) => { if (!cancelled) setAiInsight(d); })
+      .catch(() => { if (!cancelled) setAiInsight(null); })
+      .finally(() => { if (!cancelled) setAiLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, hasData, currentScore, prevScore, avgResponseRate, burnoutPct, enps, totalResponses, totalEmployees]);
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto">
@@ -669,6 +691,72 @@ export default function AnalyticsPage() {
               </TierGate>
             </TabsContent>
           </Tabs>
+
+          {/* AI Insights — generated from anonymous aggregate metrics */}
+          <Card className="mt-8 border-violet-200/60 dark:border-violet-500/20">
+            <CardHeader>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-white" />
+                </div>
+                <CardTitle className="text-base">AI Insights</CardTitle>
+                {aiInsight?.fallback && (
+                  <Badge variant="secondary" className="text-[10px]">Rule-based fallback</Badge>
+                )}
+                {!aiInsight?.fallback && aiInsight && (
+                  <Badge variant="secondary" className="text-[10px]">claude-sonnet-4-6</Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {aiLoading && !aiInsight ? (
+                <p className="text-sm text-gray-400">Generating insights…</p>
+              ) : !aiInsight ? (
+                <p className="text-sm text-gray-400">
+                  AI insights are unavailable right now. Your metrics and the action plan above still apply.
+                </p>
+              ) : (
+                <div className="space-y-5">
+                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">{aiInsight.narrative}</p>
+
+                  <div className={`flex items-start gap-3 p-3 rounded-lg border ${
+                    aiInsight.burnout_risk.level === "high"
+                      ? "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20"
+                      : aiInsight.burnout_risk.level === "medium"
+                      ? "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20"
+                      : "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20"
+                  }`}>
+                    <AlertTriangle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
+                      aiInsight.burnout_risk.level === "high" ? "text-red-500"
+                      : aiInsight.burnout_risk.level === "medium" ? "text-amber-500" : "text-emerald-500"
+                    }`} />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        Burnout risk: <span className="capitalize">{aiInsight.burnout_risk.level}</span>
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 leading-relaxed">{aiInsight.burnout_risk.explanation}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Recommended for managers</p>
+                    <div className="space-y-2">
+                      {aiInsight.recommendations.map((rec, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/8">
+                          <div className="h-5 w-5 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
+                          <p className="text-sm text-gray-700 dark:text-gray-200">{rec}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    Generated from anonymous aggregate metrics only — no individual responses are sent. Use as a starting point, not a substitute for talking to your team.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

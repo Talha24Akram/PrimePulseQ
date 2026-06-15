@@ -163,6 +163,7 @@ function buildEmailHtml({
   const eCompany = escapeHtml(companyName);
   const eUrl = surveyUrl.replace(/"/g, "%22");
   const eUnsub = unsubscribeUrl.replace(/"/g, "%22");
+  const eTrust = (unsubscribeUrl.split("/api/unsubscribe")[0] + "/trust").replace(/"/g, "%22");
 
   return `<!DOCTYPE html>
 <html>
@@ -220,7 +221,7 @@ function buildEmailHtml({
           <tr>
             <td style="padding-top:24px;text-align:center;">
               <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;">
-                This survey is 100% anonymous. Your identity is never stored or linked to your responses.
+                This survey is 100% anonymous. <a href="${eTrust}" style="color:#7c3aed;text-decoration:underline;">How your privacy is protected →</a>
               </p>
               <p style="margin:0;font-size:11px;color:#d1d5db;">
                 Don't want to receive survey emails? <a href="${eUnsub}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
