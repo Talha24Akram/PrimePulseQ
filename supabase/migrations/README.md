@@ -35,6 +35,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260615000000_atomic_submit_response.sql` | `submit_survey_response()` — atomic validate + insert + mark-used |
 | `20260615000001_sliding_window_rate_limit.sql` | Replaces rate limiting with a sliding-window counter |
 | `20260615000002_claim_owner.sql` | `claim_owner()` — race-free first-owner bootstrap |
+| `20260615000003_purge_expired_tokens.sql` | `purge_expired_tokens()` — housekeeping for used/expired tokens |
 
 ## One-time setup after first deploy
 

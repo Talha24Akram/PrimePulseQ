@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { escapeHtml } from "@/lib/utils";
+import { resolveFromEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+    const fromEmail = resolveFromEmail();
     const displayName = escapeHtml(employeeName ?? employeeEmail.split("@")[0]);
     const company = escapeHtml(companyName ?? "Your employer");
     const contactEmail = escapeHtml(adminEmail ?? user.email ?? "");

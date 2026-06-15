@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { notifyWebhooks } from "@/lib/webhooks";
 import { escapeHtml } from "@/lib/utils";
+import { resolveFromEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const fromName = profile?.company_name ?? profile?.full_name ?? "Your Team";
-    const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+    const fromEmail = resolveFromEmail();
 
     // Service role client for inserting survey tokens (bypasses RLS)
     const serviceClient = createClient(

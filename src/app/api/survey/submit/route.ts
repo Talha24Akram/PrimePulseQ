@@ -8,8 +8,11 @@ const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 
 // Hash the IP so raw addresses are never stored in the DB.
+// Prefer a dedicated RATE_LIMIT_SALT; fall back to CRON_SECRET for backward
+// compatibility so rotating one secret doesn't silently affect the other.
 async function hashIp(ip: string): Promise<string> {
-  const data = new TextEncoder().encode(ip + (process.env.CRON_SECRET ?? "salt"));
+  const salt = process.env.RATE_LIMIT_SALT ?? process.env.CRON_SECRET ?? "salt";
+  const data = new TextEncoder().encode(ip + salt);
   const buf = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
 }

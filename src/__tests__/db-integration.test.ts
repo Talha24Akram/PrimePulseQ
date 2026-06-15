@@ -37,6 +37,7 @@ beforeAll(async () => {
   await db.exec(migration("20260615000000_atomic_submit_response.sql"));
   await db.exec(migration("20260615000001_sliding_window_rate_limit.sql"));
   await db.exec(migration("20260615000002_claim_owner.sql"));
+  await db.exec(migration("20260615000003_purge_expired_tokens.sql"));
 }, 60000);
 
 async function newUser(): Promise<string> {
@@ -211,5 +212,31 @@ describe("claim_owner", () => {
       `select is_owner from profiles where id = $1`, [second]
     )).rows[0].is_owner;
     expect(isOwner).toBe(false);
+  });
+});
+
+// ── token cleanup ────────────────────────────────────────────
+describe("purge_expired_tokens", () => {
+  it("deletes used and expired tokens but keeps live ones", async () => {
+    const { surveyId, employeeId, userId } = await seedSurvey();
+    // Two more employees so each token has a distinct (survey_id, employee_id).
+    const emp2 = (await db.query<{ id: string }>(`insert into employees (workspace_id, email) values ($1,$2) returning id`, [userId, `e${Math.random()}@x.com`])).rows[0].id;
+    const emp3 = (await db.query<{ id: string }>(`insert into employees (workspace_id, email) values ($1,$2) returning id`, [userId, `e${Math.random()}@x.com`])).rows[0].id;
+
+    // live (unused, future expiry) — should survive
+    await makeToken(surveyId, employeeId, { used: false, expiresAt: new Date(Date.now() + 864e5).toISOString() });
+    // used — should be deleted
+    await makeToken(surveyId, emp2, { used: true, expiresAt: new Date(Date.now() + 864e5).toISOString() });
+    // expired — should be deleted
+    await makeToken(surveyId, emp3, { used: false, expiresAt: new Date(Date.now() - 1000).toISOString() });
+
+    const before = (await db.query<{ c: number }>(`select count(*)::int c from survey_tokens where survey_id = $1`, [surveyId])).rows[0].c;
+    expect(before).toBe(3);
+
+    const deleted = (await db.query<{ purge_expired_tokens: number }>(`select purge_expired_tokens() as purge_expired_tokens`)).rows[0].purge_expired_tokens;
+    expect(deleted).toBeGreaterThanOrEqual(2);
+
+    const remaining = (await db.query<{ c: number }>(`select count(*)::int c from survey_tokens where survey_id = $1`, [surveyId])).rows[0].c;
+    expect(remaining).toBe(1); // only the live token survives
   });
 });

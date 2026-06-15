@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 import { notifyWebhooks } from "@/lib/webhooks";
 import { escapeHtml } from "@/lib/utils";
+import { resolveFromEmail } from "@/lib/email";
 
 // This route is called by Vercel Cron daily.
 // It finds all active surveys whose frequency matches today's schedule
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   const resend = new Resend(process.env.RESEND_API_KEY);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://primepulseq.vercel.app";
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+  const fromEmail = resolveFromEmail();
 
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon ... 6=Sat
@@ -157,7 +158,16 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ message: "Done", sent: totalSent, surveys: surveys.length });
+  // Housekeeping: purge used/expired survey tokens so the table stays small.
+  let purged = 0;
+  try {
+    const { data } = await supabase.rpc("purge_expired_tokens");
+    purged = typeof data === "number" ? data : Number(data ?? 0);
+  } catch (err) {
+    console.error("purge_expired_tokens failed:", err);
+  }
+
+  return NextResponse.json({ message: "Done", sent: totalSent, surveys: surveys.length, purged });
 }
 
 function buildEmailHtml({
