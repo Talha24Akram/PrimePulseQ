@@ -48,6 +48,7 @@ beforeAll(async () => {
   await db.exec(migration("20260616000003_data_retention.sql"));
   await db.exec(migration("20260616000004_more_prefs.sql"));
   await db.exec(migration("20260616000005_send_schedule.sql"));
+  await db.exec(migration("20260616000006_translations_check.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
@@ -347,6 +348,22 @@ describe("purge_old_responses (data retention)", () => {
     try { await db.query(`update profiles set data_retention_days = 45 where id = $1`, [u]); }
     catch { failed = true; }
     expect(failed).toBe(true);
+  });
+});
+
+describe("surveys.translations check constraint", () => {
+  it("accepts a JSON object but rejects arrays/scalars", async () => {
+    const { surveyId } = await seedSurvey();
+    await db.query(`update surveys set translations = '{"questions":{}}'::jsonb where id = $1`, [surveyId]);
+    let arrFailed = false;
+    try { await db.query(`update surveys set translations = '[]'::jsonb where id = $1`, [surveyId]); }
+    catch { arrFailed = true; }
+    expect(arrFailed).toBe(true);
+
+    let scalarFailed = false;
+    try { await db.query(`update surveys set translations = '5'::jsonb where id = $1`, [surveyId]); }
+    catch { scalarFailed = true; }
+    expect(scalarFailed).toBe(true);
   });
 });
 

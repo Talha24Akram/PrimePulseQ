@@ -46,6 +46,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260616000003_data_retention.sql` | `profiles.data_retention_days` + `purge_old_responses()` |
 | `20260616000004_more_prefs.sql` | `profiles` response-rate alert / min-cohort / digest prefs |
 | `20260616000005_send_schedule.sql` | `profiles` send day/hour/timezone (per-tenant cron) |
+| `20260616000006_translations_check.sql` | `surveys.translations` must be a JSON object |
 
 ## One-time setup after first deploy
 
