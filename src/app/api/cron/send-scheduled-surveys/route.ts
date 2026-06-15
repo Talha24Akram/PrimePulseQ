@@ -5,6 +5,7 @@ import { notifyWebhooks } from "@/lib/webhooks";
 import { escapeHtml } from "@/lib/utils";
 import { resolveFromEmail } from "@/lib/email";
 import { getStrings, normalizeLocale, isRtl } from "@/lib/locales";
+import { clampExpiryDays, expiryFromNow, DEFAULT_SURVEY_EXPIRY_DAYS } from "@/lib/preferences";
 
 // This route is called by Vercel Cron daily.
 // It finds all active surveys whose frequency matches today's schedule
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
     // Fetch workspace profile (including webhook URLs)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, company_name, slack_webhook_url, teams_webhook_url")
+      .select("full_name, company_name, slack_webhook_url, teams_webhook_url, survey_expiry_days")
       .eq("id", survey.workspace_id)
       .single();
 
@@ -88,8 +89,10 @@ export async function GET(request: NextRequest) {
 
     const companyName = profile?.company_name ?? profile?.full_name ?? "Your Team";
 
-    // Generate per-employee survey tokens (expire in 7 days)
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    // Generate per-employee survey tokens (per-workspace expiry preference)
+    const expiresAt = expiryFromNow(
+      clampExpiryDays((profile as { survey_expiry_days?: number })?.survey_expiry_days ?? DEFAULT_SURVEY_EXPIRY_DAYS)
+    );
     const tokenRows = employees.map((emp) => ({
       token: crypto.randomUUID(),
       survey_id: survey.id,

@@ -8,6 +8,7 @@ import { escapeHtml } from "@/lib/utils";
 import { resolveFromEmail } from "@/lib/email";
 import { getStrings, normalizeLocale, isRtl } from "@/lib/locales";
 import { blockCrossSite } from "@/lib/csrf";
+import { clampExpiryDays, expiryFromNow, DEFAULT_SURVEY_EXPIRY_DAYS } from "@/lib/preferences";
 
 export async function POST(request: NextRequest) {
   const csrf = blockCrossSite(request);
@@ -58,10 +59,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No valid employees found" }, { status: 400 });
     }
 
-    // Fetch sender profile (including webhook URLs)
+    // Fetch sender profile (including webhook URLs + preferences)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, company_name, slack_webhook_url, teams_webhook_url")
+      .select("full_name, company_name, slack_webhook_url, teams_webhook_url, survey_expiry_days")
       .eq("id", user.id)
       .single();
 
@@ -77,7 +78,9 @@ export async function POST(request: NextRequest) {
     );
 
     // Generate per-employee tokens (upsert so resending creates a fresh token)
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const expiresAt = expiryFromNow(
+      clampExpiryDays((profile as { survey_expiry_days?: number })?.survey_expiry_days ?? DEFAULT_SURVEY_EXPIRY_DAYS)
+    );
     const tokenRows = employees.map((emp) => ({
       token: crypto.randomUUID(),
       survey_id: surveyId,

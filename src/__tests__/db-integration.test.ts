@@ -44,6 +44,7 @@ beforeAll(async () => {
   await db.exec(migration("20260615000007_benchmarks.sql"));
   await db.exec(migration("20260616000000_benchmark_hardening.sql"));
   await db.exec(migration("20260616000001_responses_index.sql"));
+  await db.exec(migration("20260616000002_survey_expiry_pref.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
@@ -291,6 +292,28 @@ describe("count_completed_cycles", () => {
       `select count_completed_cycles($1) as count_completed_cycles`, [userId]
     );
     expect(r.rows[0].count_completed_cycles).toBe(0);
+  });
+});
+
+describe("survey_expiry_days preference", () => {
+  it("defaults to 7 and rejects out-of-range values", async () => {
+    const u = await newUser();
+    const def = (await db.query<{ survey_expiry_days: number }>(
+      `select survey_expiry_days from profiles where id = $1`, [u]
+    )).rows[0].survey_expiry_days;
+    expect(def).toBe(7);
+
+    await db.query(`update profiles set survey_expiry_days = 14 where id = $1`, [u]);
+    const updated = (await db.query<{ survey_expiry_days: number }>(
+      `select survey_expiry_days from profiles where id = $1`, [u]
+    )).rows[0].survey_expiry_days;
+    expect(updated).toBe(14);
+
+    let failed = false;
+    try {
+      await db.query(`update profiles set survey_expiry_days = 999 where id = $1`, [u]);
+    } catch { failed = true; }
+    expect(failed).toBe(true);
   });
 });
 

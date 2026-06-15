@@ -20,6 +20,7 @@ export interface Profile {
   teams_webhook_url: string | null;
   industry: string | null;
   headcount_band: string | null;
+  survey_expiry_days: number | null;
   created_at: string;
 }
 

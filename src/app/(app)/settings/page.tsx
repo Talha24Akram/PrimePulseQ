@@ -27,6 +27,9 @@ export default function SettingsPage() {
 function SettingsInner() {
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [company, setCompany] = useState({ name: "", slug: "", website: "", industry: "", headcountBand: "" });
+  const [expiryDays, setExpiryDays] = useState<number>(7);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsSaved, setPrefsSaved] = useState(false);
   const NOTIF_KEY = "ppq_notification_prefs";
   const [notifications, setNotifications] = useState(() => {
     if (typeof window !== "undefined") {
@@ -67,8 +70,17 @@ function SettingsInner() {
         industry: profile.industry ?? "",
         headcountBand: profile.headcount_band ?? "",
       });
+      setExpiryDays(profile.survey_expiry_days ?? 7);
     }
   }, [profile]);
+
+  async function savePrefs() {
+    setPrefsSaving(true);
+    await updateProfile({ survey_expiry_days: expiryDays });
+    setPrefsSaving(false);
+    setPrefsSaved(true);
+    setTimeout(() => setPrefsSaved(false), 2500);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -248,17 +260,39 @@ function SettingsInner() {
           </Card>
         </TabsContent>
 
-        {/* Preferences — intentionally empty for now; more settings coming soon */}
+        {/* Preferences */}
         <TabsContent value="preferences">
           <Card>
-            <CardContent className="p-12 text-center">
-              <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <Sun className="h-6 w-6 text-gray-500" />
+            <CardHeader>
+              <CardTitle className="text-base">Survey preferences</CardTitle>
+              <CardDescription>Control how surveys behave for your workspace.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-2 max-w-xs">
+                <Label>Survey link expiry</Label>
+                <Select value={String(expiryDays)} onValueChange={(v) => setExpiryDays(Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[3, 7, 14, 30].map((d) => (
+                      <SelectItem key={d} value={String(d)}>{d} days</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-400">
+                  How long each employee&apos;s survey link stays valid after it&apos;s sent. Shorter for fast
+                  teams, longer for async/remote teams who check email less often.
+                </p>
               </div>
-              <p className="text-sm font-medium text-gray-300 mb-1">No preferences yet</p>
-              <p className="text-xs text-gray-500 max-w-xs mx-auto">
-                Additional preferences will appear here as we add them.
-              </p>
+              <div className="flex items-center gap-3">
+                <Button onClick={savePrefs} disabled={prefsSaving}>
+                  {prefsSaving ? "Saving…" : "Save preferences"}
+                </Button>
+                {prefsSaved && (
+                  <span className="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Saved
+                  </span>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
