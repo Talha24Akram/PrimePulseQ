@@ -43,6 +43,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260616000000_benchmark_hardening.sql` | `count_completed_cycles()` + `profiles.industry` check constraint |
 | `20260616000001_responses_index.sql` | index on `responses(survey_id)` |
 | `20260616000002_survey_expiry_pref.sql` | `profiles.survey_expiry_days` (per-workspace token expiry) |
+| `20260616000003_data_retention.sql` | `profiles.data_retention_days` + `purge_old_responses()` |
 
 ## One-time setup after first deploy
 

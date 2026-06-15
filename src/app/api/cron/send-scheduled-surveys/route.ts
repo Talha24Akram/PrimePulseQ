@@ -177,7 +177,16 @@ export async function GET(request: NextRequest) {
     console.error("purge_expired_tokens failed:", err);
   }
 
-  return NextResponse.json({ message: "Done", sent: totalSent, surveys: surveys.length, purged });
+  // Enforce per-workspace data retention (no-op for "keep forever" workspaces).
+  let responsesPurged = 0;
+  try {
+    const { data } = await supabase.rpc("purge_old_responses");
+    responsesPurged = typeof data === "number" ? data : Number(data ?? 0);
+  } catch (err) {
+    console.error("purge_old_responses failed:", err);
+  }
+
+  return NextResponse.json({ message: "Done", sent: totalSent, surveys: surveys.length, purged, responsesPurged });
 }
 
 function buildEmailHtml({

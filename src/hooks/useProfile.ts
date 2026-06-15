@@ -21,6 +21,7 @@ export interface Profile {
   industry: string | null;
   headcount_band: string | null;
   survey_expiry_days: number | null;
+  data_retention_days: number | null;
   created_at: string;
 }
 

@@ -28,6 +28,7 @@ function SettingsInner() {
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [company, setCompany] = useState({ name: "", slug: "", website: "", industry: "", headcountBand: "" });
   const [expiryDays, setExpiryDays] = useState<number>(7);
+  const [retentionDays, setRetentionDays] = useState<string>(""); // "" = keep forever
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsSaved, setPrefsSaved] = useState(false);
   const NOTIF_KEY = "ppq_notification_prefs";
@@ -71,12 +72,16 @@ function SettingsInner() {
         headcountBand: profile.headcount_band ?? "",
       });
       setExpiryDays(profile.survey_expiry_days ?? 7);
+      setRetentionDays(profile.data_retention_days ? String(profile.data_retention_days) : "");
     }
   }, [profile]);
 
   async function savePrefs() {
     setPrefsSaving(true);
-    await updateProfile({ survey_expiry_days: expiryDays });
+    await updateProfile({
+      survey_expiry_days: expiryDays,
+      data_retention_days: retentionDays ? Number(retentionDays) : null,
+    });
     setPrefsSaving(false);
     setPrefsSaved(true);
     setTimeout(() => setPrefsSaved(false), 2500);
@@ -283,6 +288,26 @@ function SettingsInner() {
                   teams, longer for async/remote teams who check email less often.
                 </p>
               </div>
+
+              <Separator />
+
+              <div className="space-y-2 max-w-xs">
+                <Label>Data retention</Label>
+                <Select value={retentionDays || "forever"} onValueChange={(v) => setRetentionDays(v === "forever" ? "" : v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="forever">Keep forever</SelectItem>
+                    {[30, 90, 180, 365].map((d) => (
+                      <SelectItem key={d} value={String(d)}>{d} days</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-400">
+                  Automatically purge anonymous responses older than this. &ldquo;Keep forever&rdquo; never deletes.
+                  Useful for GDPR / data-minimization requirements.
+                </p>
+              </div>
+
               <div className="flex items-center gap-3">
                 <Button onClick={savePrefs} disabled={prefsSaving}>
                   {prefsSaving ? "Saving…" : "Save preferences"}

@@ -45,6 +45,7 @@ beforeAll(async () => {
   await db.exec(migration("20260616000000_benchmark_hardening.sql"));
   await db.exec(migration("20260616000001_responses_index.sql"));
   await db.exec(migration("20260616000002_survey_expiry_pref.sql"));
+  await db.exec(migration("20260616000003_data_retention.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
@@ -313,6 +314,36 @@ describe("survey_expiry_days preference", () => {
     try {
       await db.query(`update profiles set survey_expiry_days = 999 where id = $1`, [u]);
     } catch { failed = true; }
+    expect(failed).toBe(true);
+  });
+});
+
+describe("purge_old_responses (data retention)", () => {
+  it("purges responses older than retention for opted-in workspaces, keeps the rest", async () => {
+    // Workspace A: 90-day retention. One old response + one recent.
+    const a = await seedSurvey();
+    await db.query(`update profiles set data_retention_days = 90 where id = $1`, [a.userId]);
+    await db.query(`insert into responses (survey_id, answers, submitted_at) values ($1, '{}'::jsonb, now() - interval '200 days')`, [a.surveyId]);
+    await db.query(`insert into responses (survey_id, answers, submitted_at) values ($1, '{}'::jsonb, now() - interval '5 days')`, [a.surveyId]);
+
+    // Workspace B: keep forever (null). Old response must survive.
+    const b = await seedSurvey();
+    await db.query(`insert into responses (survey_id, answers, submitted_at) values ($1, '{}'::jsonb, now() - interval '500 days')`, [b.surveyId]);
+
+    const deleted = (await db.query<{ purge_old_responses: number }>(`select purge_old_responses() as purge_old_responses`)).rows[0].purge_old_responses;
+    expect(deleted).toBe(1); // only A's 200-day-old response
+
+    const aLeft = (await db.query<{ c: number }>(`select count(*)::int c from responses where survey_id = $1`, [a.surveyId])).rows[0].c;
+    const bLeft = (await db.query<{ c: number }>(`select count(*)::int c from responses where survey_id = $1`, [b.surveyId])).rows[0].c;
+    expect(aLeft).toBe(1); // recent one kept
+    expect(bLeft).toBe(1); // keep-forever workspace untouched
+  });
+
+  it("rejects an invalid retention value", async () => {
+    const u = await newUser();
+    let failed = false;
+    try { await db.query(`update profiles set data_retention_days = 45 where id = $1`, [u]); }
+    catch { failed = true; }
     expect(failed).toBe(true);
   });
 });
