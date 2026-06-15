@@ -3,18 +3,25 @@
 Employee pulse survey SaaS — simple, anonymous, actionable.
 
 Run short recurring surveys, collect **fully anonymous** responses, and turn the
-results into engagement trends, burnout signals, and a rule-based action plan.
+results into engagement trends, burnout signals, AI insights, and a tracked
+action plan.
 
 ## Features
 
 - Recurring pulse surveys (weekly / biweekly / monthly) with anonymous responses
 - Per-employee single-use survey links (token-based) — no employee login required
 - Engagement score, burnout signals, sentiment, and trend analytics
-- Auto-generated **Insights** + **Suggested Action Plan** (rule-based today, AI-ready)
+- **AI Insights** (Anthropic `claude-sonnet-4-6`) — narrative, burnout risk, and
+  manager recommendations, with automatic fallback to a rule-based engine
+- **In-app action tracking** — turn recommendations into tracked tasks
+- **Industry benchmarks** — compare against anonymized cohort percentiles (p25/p50/p75)
+- **Question library + survey templates** (6 starters) and saveable private templates
+- **Multi-language surveys** — en / ar / fr / de / es / pt, with RTL for Arabic
 - Survey builder: scale, multiple choice, yes/no, and text questions
 - Employee roster management with CSV import
 - Slack & Teams webhook notifications
 - Email delivery + unsubscribe handling (CAN-SPAM / GDPR friendly)
+- Public [`/trust`](src/app/trust/page.tsx) page explaining anonymity to employees
 - 4-tier plans: Free / Starter / Growth / Enterprise (Paddle billing)
 - Polished dark-mode UI
 
@@ -26,9 +33,10 @@ results into engagement trends, burnout signals, and a rule-based action plan.
 | Styling | Tailwind CSS v4 (`@variant dark` + `data-theme`), Radix UI primitives |
 | Charts | Recharts |
 | Auth + Database | Supabase (PostgreSQL + Row Level Security) |
+| AI | Anthropic (`@anthropic-ai/sdk`, `claude-sonnet-4-6`) |
 | Email | Resend |
 | Billing | Paddle |
-| Tests | Vitest |
+| Tests | Vitest + PGlite (in-process Postgres) |
 | Deployment | Vercel (with Vercel Cron for scheduled surveys) |
 
 ## Anonymous survey flow (token-based)
@@ -91,8 +99,22 @@ RESEND_FROM_EMAIL=onboarding@resend.dev
 # App URL (used to build email + survey links)
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Cron auth (any random string; also used to salt rate-limit IP hashing)
+# Cron auth (any random string)
 CRON_SECRET=your-random-secret
+```
+
+Optional:
+
+```env
+# Anthropic — powers AI Insights on Analytics. If unset, the app falls back to
+# the built-in rule-based insights (no hard failure).
+ANTHROPIC_API_KEY=sk-ant-your-key
+
+# Dedicated salt for hashing IPs in rate limiting. Falls back to CRON_SECRET if unset.
+RATE_LIMIT_SALT=your-random-rate-limit-salt
+
+# Required only to use the one-time POST /api/setup/owner route (disabled unless set).
+SETUP_SECRET=your-random-setup-secret
 ```
 
 Paddle billing (get from [vendors.paddle.com](https://vendors.paddle.com)):
@@ -140,9 +162,9 @@ npm run format     # prettier --write .
 
 ## Pre-deployment checklist
 
-- [ ] Schema applied in Supabase (tables, `increment_rate_limit`, RLS policies)
-- [ ] Owner account marked via the SQL snippet in the migration
-- [ ] All env vars set in Vercel (Supabase, Resend, Paddle, `CRON_SECRET`)
+- [ ] All migrations applied in Supabase (tables, RPCs, RLS policies) in filename order
+- [ ] Owner account claimed via `POST /api/setup/owner` (needs `SETUP_SECRET`) or the manual SQL snippet
+- [ ] All env vars set in Vercel (Supabase, Resend, Paddle, `CRON_SECRET`; optionally `ANTHROPIC_API_KEY`, `RATE_LIMIT_SALT`, `SETUP_SECRET`)
 - [ ] `NEXT_PUBLIC_APP_URL` set to the production domain
 - [ ] Resend sending domain verified (or using the test sender for staging)
 - [ ] Paddle products/prices created and price IDs wired to env vars
@@ -163,21 +185,27 @@ npm run format     # prettier --write .
   `SELECT … FOR UPDATE` row lock, so a token can't be used twice even under
   concurrent requests. (True multi-connection concurrency is covered by the row
   lock; the integration test verifies the sequential reuse guarantee.)
-- **Insights & Action Plan are rule-based**, not AI-generated. The logic lives in
-  `src/lib/insights.ts` with a stable `InsightInput` contract designed to be the
-  future LLM payload. See `TODO(ai-insights)` there.
+- **AI Insights** use Anthropic `claude-sonnet-4-6` (`src/lib/ai-insights.ts`)
+  and fall back to the deterministic rule-based engine (`src/lib/insights.ts`)
+  when `ANTHROPIC_API_KEY` is unset or the call fails. Only anonymous aggregate
+  metrics are sent — never individual responses.
 - **PDF export is text/table only** — `src/lib/export-pdf.ts` builds the PDF with
   jsPDF's native vector/text API (crisp, selectable text). It does **not** embed
   the Recharts charts; a server-side render (Puppeteer / `@react-pdf/renderer`)
   would be needed for charts in the PDF.
 - **Test coverage**: Vitest suites in `src/__tests__/` cover `utils`,
-  `token-validation`, `rate-limit`, `insights`, the submit status mapping, and a
-  **real Postgres integration test** (`db-integration`, via PGlite) that applies
-  the migrations and exercises the atomic submit + sliding-window functions.
-  Run `npm test`. Full browser E2E (Playwright) and automated cross-tenant RLS
-  isolation tests are still outstanding.
+  `token-validation`, `rate-limit`, `insights`, the submit status mapping, locale
+  helpers, a **real Postgres integration test** (`db-integration`, via PGlite),
+  and **cross-tenant RLS isolation tests** (`rls-isolation`) that drive a
+  non-superuser role to prove tenant data is hidden. Run `npm test`. Full browser
+  E2E (Playwright) is still outstanding.
 - **Department scores are intentionally not computed** — anonymity means responses
-  can't be linked to a department; only headcount distribution is shown.
+  can't be linked to a department; only headcount distribution is shown. Industry
+  benchmarks (`get_benchmark`) compare a workspace against cohort percentiles and
+  are k-anonymity gated to ≥ 3 distinct orgs.
+- **Not yet implemented** (deferred): manager weekly digest email, SMS/WhatsApp
+  delivery (Twilio), HRIS sync (BambooHR / Rippling / Workday), and per-tenant
+  cron send-time/timezone — these require external accounts/config.
 
 ## License
 
