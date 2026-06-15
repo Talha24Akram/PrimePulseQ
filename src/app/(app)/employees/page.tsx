@@ -34,7 +34,7 @@ export default function EmployeesPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
-  const [newEmployee, setNewEmployee] = useState({ name: "", email: "", department: "", role: "" });
+  const [newEmployee, setNewEmployee] = useState({ name: "", email: "", department: "", role: "", locale: "en" });
 
   const tier = profile?.subscription_tier ?? "free";
   const isOwner = profile?.is_owner ?? false;
@@ -84,6 +84,7 @@ export default function EmployeesPage() {
       name: newEmployee.name || null,
       department: newEmployee.department || null,
       role: newEmployee.role || null,
+      locale: newEmployee.locale || "en",
     });
 
     if (error) {
@@ -108,7 +109,7 @@ export default function EmployeesPage() {
       }
 
       setShowAdd(false);
-      setNewEmployee({ name: "", email: "", department: "", role: "" });
+      setNewEmployee({ name: "", email: "", department: "", role: "", locale: "en" });
       await loadEmployees();
     }
     setAdding(false);
@@ -137,9 +138,17 @@ export default function EmployeesPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const validLocales = ["en", "ar", "fr", "de", "es", "pt"];
     let rows = lines.slice(1).map((line) => {
-      const [name, email, department, role] = line.split(",").map((s) => s.trim().replace(/^"|"$/g, ""));
-      return { workspace_id: user.id, email, name: name || null, department: department || null, role: role || null };
+      const [name, email, department, role, locale] = line.split(",").map((s) => s.trim().replace(/^"|"$/g, ""));
+      return {
+        workspace_id: user.id,
+        email,
+        name: name || null,
+        department: department || null,
+        role: role || null,
+        locale: validLocales.includes((locale || "").toLowerCase()) ? locale.toLowerCase() : "en",
+      };
     }).filter((r) => r.email && r.email.includes("@"));
 
     // Enforce the plan's employee limit on imports too
@@ -360,7 +369,7 @@ export default function EmployeesPage() {
       </Card>
 
       <p className="text-xs text-gray-400 mt-3">
-        CSV format: <code className="bg-gray-100 dark:bg-white/8 px-1 rounded">name,email,department,role</code> (first row = header)
+        CSV format: <code className="bg-gray-100 dark:bg-white/8 px-1 rounded">name,email,department,role,locale</code> (first row = header; locale optional: en/ar/fr/de/es/pt)
       </p>
 
       {/* Add employee dialog */}
@@ -409,6 +418,21 @@ export default function EmployeesPage() {
                   onChange={(e) => setNewEmployee((p) => ({ ...p, role: e.target.value }))}
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Survey language</Label>
+              <select
+                value={newEmployee.locale}
+                onChange={(e) => setNewEmployee((p) => ({ ...p, locale: e.target.value }))}
+                className="w-full h-10 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 text-sm text-gray-700 dark:text-gray-200"
+              >
+                <option value="en">English</option>
+                <option value="ar">العربية (Arabic)</option>
+                <option value="fr">Français (French)</option>
+                <option value="de">Deutsch (German)</option>
+                <option value="es">Español (Spanish)</option>
+                <option value="pt">Português (Portuguese)</option>
+              </select>
             </div>
           </div>
           <DialogFooter>

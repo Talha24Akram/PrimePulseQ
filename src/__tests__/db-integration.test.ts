@@ -38,6 +38,9 @@ beforeAll(async () => {
   await db.exec(migration("20260615000001_sliding_window_rate_limit.sql"));
   await db.exec(migration("20260615000002_claim_owner.sql"));
   await db.exec(migration("20260615000003_purge_expired_tokens.sql"));
+  await db.exec(migration("20260615000004_actions.sql"));
+  await db.exec(migration("20260615000005_question_library_and_templates.sql"));
+  await db.exec(migration("20260615000006_survey_i18n.sql"));
 }, 60000);
 
 async function newUser(): Promise<string> {

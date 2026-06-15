@@ -37,6 +37,8 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260615000002_claim_owner.sql` | `claim_owner()` — race-free first-owner bootstrap |
 | `20260615000003_purge_expired_tokens.sql` | `purge_expired_tokens()` — housekeeping for used/expired tokens |
 | `20260615000004_actions.sql` | `actions` table — in-app action tracking + RLS |
+| `20260615000005_question_library_and_templates.sql` | question library + survey templates (+ 6 starters) + RLS |
+| `20260615000006_survey_i18n.sql` | `employees.locale` + `surveys.translations` for multi-language surveys |
 
 ## One-time setup after first deploy
 

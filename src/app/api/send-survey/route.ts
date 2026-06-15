@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { notifyWebhooks } from "@/lib/webhooks";
 import { escapeHtml } from "@/lib/utils";
 import { resolveFromEmail } from "@/lib/email";
+import { getStrings, normalizeLocale, isRtl } from "@/lib/locales";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     // Fetch selected employees — exclude those who have opted out of survey emails
     const { data: employees } = await supabase
       .from("employees")
-      .select("id, name, email")
+      .select("id, name, email, locale")
       .in("id", employeeIds)
       .eq("workspace_id", user.id)
       .eq("is_active", true)
@@ -102,13 +103,20 @@ export async function POST(request: NextRequest) {
         const surveyUrl = surveyToken ? `${appUrl}/s/${surveyToken}` : `${appUrl}/s/${surveyId}`;
         const unsubToken = Buffer.from(`${user.id}:${emp.id}`).toString("base64url");
         const unsubscribeUrl = `${appUrl}/api/unsubscribe?t=${unsubToken}`;
+        const locale = normalizeLocale((emp as { locale?: string }).locale);
+        const s = getStrings(locale);
+        const name = emp.name ?? emp.email.split("@")[0];
         return resend.emails.send({
           from: `${fromName} <${fromEmail}>`,
           to: emp.email,
-          subject: `Quick pulse survey: ${survey.title}`,
+          subject: s.emailSubject(survey.title),
           headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
           html: buildEmailHtml({
-            employeeName: emp.name ?? emp.email.split("@")[0],
+            greeting: s.emailGreeting(name),
+            intro: s.emailIntro,
+            cta: s.takeSurvey,
+            anonymityNote: s.identityNote,
+            dir: isRtl(locale) ? "rtl" : "ltr",
             surveyTitle: survey.title,
             surveyDescription: survey.description ?? "",
             surveyUrl,
@@ -143,21 +151,30 @@ export async function POST(request: NextRequest) {
 }
 
 function buildEmailHtml({
-  employeeName,
+  greeting,
+  intro,
+  cta,
+  dir,
   surveyTitle,
   surveyDescription,
   surveyUrl,
   companyName,
   unsubscribeUrl,
 }: {
-  employeeName: string;
+  greeting: string;
+  intro: string;
+  cta: string;
+  anonymityNote: string;
+  dir: "ltr" | "rtl";
   surveyTitle: string;
   surveyDescription: string;
   surveyUrl: string;
   companyName: string;
   unsubscribeUrl: string;
 }) {
-  const eName = escapeHtml(employeeName);
+  const eGreeting = escapeHtml(greeting);
+  const eIntro = escapeHtml(intro);
+  const eCta = escapeHtml(cta);
   const eTitle = escapeHtml(surveyTitle);
   const eDesc = surveyDescription ? escapeHtml(surveyDescription) : "";
   const eCompany = escapeHtml(companyName);
@@ -166,12 +183,12 @@ function buildEmailHtml({
   const eTrust = (unsubscribeUrl.split("/api/unsubscribe")[0] + "/trust").replace(/"/g, "%22");
 
   return `<!DOCTYPE html>
-<html>
+<html dir="${dir}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<body dir="${dir}" style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 16px;">
     <tr>
       <td align="center">
@@ -188,7 +205,7 @@ function buildEmailHtml({
           <tr>
             <td style="background:#ffffff;border-radius:16px;border:1px solid #e5e7eb;padding:40px 36px;">
 
-              <p style="margin:0 0 8px;font-size:15px;color:#6b7280;">Hi ${eName},</p>
+              <p style="margin:0 0 8px;font-size:15px;color:#6b7280;">${eGreeting}</p>
               <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#111827;line-height:1.3;">
                 ${eTitle}
               </h1>
@@ -196,7 +213,7 @@ function buildEmailHtml({
               ${eDesc ? `<p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">${eDesc}</p>` : ""}
 
               <p style="margin:0 0 28px;font-size:15px;color:#374151;line-height:1.6;">
-                We'd love to hear how you're doing. This short pulse survey takes <strong>less than 2 minutes</strong> and your responses are completely <strong>anonymous</strong> — your name is never attached to your answers.
+                ${eIntro}
               </p>
 
               <!-- CTA button -->
@@ -205,7 +222,7 @@ function buildEmailHtml({
                   <td align="center" style="padding-bottom:28px;">
                     <a href="${eUrl}"
                       style="display:inline-block;background:#7c3aed;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
-                      Take the survey →
+                      ${eCta}
                     </a>
                   </td>
                 </tr>

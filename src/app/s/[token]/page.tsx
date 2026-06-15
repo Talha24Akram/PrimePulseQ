@@ -15,13 +15,30 @@ interface Question {
   order_index: number;
 }
 
+interface SurveyStringsDTO {
+  anonymous: string; optional: string; back: string; next: string; submit: string;
+  submitting: string; thankYou: string; recorded: string; identityNote: string;
+  notAtAll: string; extremely: string; yes: string; no: string;
+}
+
 interface SurveyData {
   id: string;
   title: string;
   description: string | null;
   company_name: string;
   questions: Question[];
+  locale?: string;
+  dir?: "ltr" | "rtl";
+  strings?: SurveyStringsDTO;
 }
+
+const EN_STRINGS: SurveyStringsDTO = {
+  anonymous: "100% anonymous", optional: "Optional", back: "← Back", next: "Next",
+  submit: "Submit response", submitting: "Submitting...", thankYou: "Thank you!",
+  recorded: "Your response has been recorded anonymously.",
+  identityNote: "Your identity is never stored or linked to this response.",
+  notAtAll: "1 — Not at all", extremely: "10 — Extremely", yes: "Yes", no: "No",
+};
 
 type Answers = Record<string, string | number>;
 type LoadState = "loading" | "ready" | "not_found" | "already_used" | "expired" | "closed" | "error";
@@ -116,6 +133,9 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
     }
   }
 
+  const t = survey?.strings ?? EN_STRINGS;
+  const dir: "ltr" | "rtl" = survey?.dir ?? "ltr";
+
   // ── Loading ──────────────────────────────────────────────────
   if (loadState === "loading") {
     return (
@@ -188,20 +208,20 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
   // ── Success ──────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="relative min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center p-6 overflow-hidden">
+      <div dir={dir} className="relative min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center p-6 overflow-hidden">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[350px] bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" aria-hidden />
         <div className="relative w-full max-w-md text-center animate-fade-up">
           <div className="h-20 w-20 rounded-full bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto mb-6 animate-scale-in">
             <CheckCircle2 className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Thank you!</h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-2">Your response has been recorded anonymously.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{t.thankYou}</h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-2">{t.recorded}</p>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             Your feedback helps make {survey.company_name} a better place to work.
           </p>
           <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-400">
             <Lock className="h-3 w-3" />
-            Your identity is never stored or linked to this response.
+            {t.identityNote}
           </div>
         </div>
       </div>
@@ -210,7 +230,7 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
 
   // ── Survey form ──────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
+    <div dir={dir} className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
       {/* Top bar */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/8">
         <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -220,7 +240,7 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <Lock className="h-3 w-3" />
-            100% anonymous
+            {t.anonymous}
           </div>
         </div>
         <div className="h-1 bg-gray-100 dark:bg-white/5">
@@ -245,10 +265,10 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
           <div key={currentStep} className="animate-scale-in bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/8 shadow-xl shadow-gray-200/50 dark:shadow-2xl dark:shadow-black/30 p-6 sm:p-8">
             <div className="flex items-center gap-2 mb-6">
               <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                Question {currentStep + 1} of {questions.length}
+                {(survey.strings ? `${currentStep + 1} / ${questions.length}` : `Question ${currentStep + 1} of ${questions.length}`)}
               </span>
               {!currentQuestion.required && (
-                <span className="text-xs text-gray-400 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-2 py-0.5 rounded-full">Optional</span>
+                <span className="text-xs text-gray-400 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-2 py-0.5 rounded-full">{t.optional}</span>
               )}
             </div>
 
@@ -274,8 +294,8 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
                   ))}
                 </div>
                 <div className="flex justify-between text-xs text-gray-400">
-                  <span>1 — Not at all</span>
-                  <span>10 — Extremely</span>
+                  <span>{t.notAtAll}</span>
+                  <span>{t.extremely}</span>
                 </div>
               </div>
             )}
@@ -283,18 +303,18 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
             {/* Yes/No */}
             {currentQuestion.type === "yes_no" && (
               <div className="grid grid-cols-2 gap-3">
-                {["Yes", "No"].map((opt) => (
+                {[{ v: "Yes", l: t.yes }, { v: "No", l: t.no }].map((opt) => (
                   <button
-                    key={opt}
-                    onClick={() => setAnswer(currentQuestion.id, opt)}
+                    key={opt.v}
+                    onClick={() => setAnswer(currentQuestion.id, opt.v)}
                     className={cn(
                       "py-5 rounded-xl text-base font-semibold transition-all border cursor-pointer",
-                      answers[currentQuestion.id] === opt
+                      answers[currentQuestion.id] === opt.v
                         ? "bg-violet-600 text-white border-violet-500 shadow-lg shadow-violet-900/50"
                         : "bg-gray-50 text-gray-700 border-gray-200 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-600 dark:bg-white/5 dark:text-gray-200 dark:border-white/10 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
                     )}
                   >
-                    {opt}
+                    {opt.l}
                   </button>
                 ))}
               </div>
@@ -346,15 +366,15 @@ export default function SurveyResponsePage({ params }: { params: Promise<{ token
               disabled={currentStep === 0}
               className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-30 transition-colors cursor-pointer"
             >
-              ← Back
+              {t.back}
             </button>
             <Button
               onClick={handleNext}
               disabled={!canProceed() || submitting}
               className="gap-2 px-8"
             >
-              {submitting ? "Submitting..." : isLast ? "Submit response" : "Next"}
-              {!isLast && !submitting && <ArrowRight className="h-4 w-4" />}
+              {submitting ? t.submitting : isLast ? t.submit : t.next}
+              {!isLast && !submitting && <ArrowRight className={cn("h-4 w-4", dir === "rtl" && "rotate-180")} />}
             </Button>
           </div>
         </div>

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { QuestionType } from "@/lib/types";
+import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/locales";
 
 interface QuestionDraft {
   id: string;
@@ -77,6 +78,11 @@ export default function NewSurveyPage() {
   const [dbTemplates, setDbTemplates] = useState<TemplateItem[]>([]);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
+  const [showTranslations, setShowTranslations] = useState(false);
+  const [transLocale, setTransLocale] = useState<Locale>("ar");
+  // qTrans: draftQuestionId -> { locale -> text }; metaTrans: locale -> {title, description}
+  const [qTrans, setQTrans] = useState<Record<string, Partial<Record<Locale, string>>>>({});
+  const [metaTrans, setMetaTrans] = useState<Partial<Record<Locale, { title: string; description: string }>>>({});
 
   useEffect(() => {
     const supabase = createClient();
@@ -202,7 +208,7 @@ export default function NewSurveyPage() {
     // Insert questions
     const validQuestions = questions.filter((q) => q.text.trim());
     if (validQuestions.length > 0) {
-      const { error: qError } = await supabase.from("questions").insert(
+      const { data: insertedQuestions, error: qError } = await supabase.from("questions").insert(
         validQuestions.map((q, i) => ({
           survey_id: survey.id,
           text: q.text.trim(),
@@ -210,8 +216,24 @@ export default function NewSurveyPage() {
           options: q.options.length > 0 ? q.options : null,
           order_index: i,
         }))
-      );
+      ).select("id, order_index");
       if (qError) { setSaveError(qError.message); setSaving(false); return; }
+
+      // Persist translations, remapping draft IDs to the new DB question IDs.
+      const byOrder = new Map((insertedQuestions ?? []).map((r) => [r.order_index as number, r.id as string]));
+      const questionsTrans: Record<string, Partial<Record<Locale, string>>> = {};
+      validQuestions.forEach((q, i) => {
+        const dbId = byOrder.get(i);
+        const t = qTrans[q.id];
+        if (dbId && t && Object.keys(t).length) questionsTrans[dbId] = t;
+      });
+      const hasTranslations = Object.keys(questionsTrans).length > 0 || Object.keys(metaTrans).length > 0;
+      if (hasTranslations) {
+        await supabase
+          .from("surveys")
+          .update({ translations: { questions: questionsTrans, meta: metaTrans } })
+          .eq("id", survey.id);
+      }
     }
 
     await logAudit("survey.created", { resourceType: "survey", resourceId: survey.id, metadata: { title: title.trim(), status } });
@@ -465,6 +487,71 @@ export default function NewSurveyPage() {
           <Plus className="h-4 w-4" />
           Add question
         </Button>
+      </div>
+
+      {/* Manage translations */}
+      <div className="mt-8">
+        <button
+          onClick={() => setShowTranslations((s) => !s)}
+          className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline"
+        >
+          {showTranslations ? "Hide translations" : "🌐 Manage translations"}
+        </button>
+
+        {showTranslations && (
+          <Card className="mt-3">
+            <CardContent className="p-5 space-y-5">
+              <div className="flex items-center gap-3 flex-wrap">
+                <Label className="mb-0">Language</Label>
+                <select
+                  value={transLocale}
+                  onChange={(e) => setTransLocale(e.target.value as Locale)}
+                  className="h-9 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  {LOCALES.filter((l) => l !== "en").map((l) => (
+                    <option key={l} value={l}>{LOCALE_LABELS[l]}</option>
+                  ))}
+                </select>
+                <span className="text-xs text-gray-400">Leave a field blank to fall back to English.</span>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Survey title ({LOCALE_LABELS[transLocale]})</Label>
+                <Input
+                  dir={transLocale === "ar" ? "rtl" : "ltr"}
+                  placeholder={title || "Translated title"}
+                  value={metaTrans[transLocale]?.title ?? ""}
+                  onChange={(e) =>
+                    setMetaTrans((prev) => ({
+                      ...prev,
+                      [transLocale]: { title: e.target.value, description: prev[transLocale]?.description ?? "" },
+                    }))
+                  }
+                />
+              </div>
+
+              {questions.filter((q) => q.text.trim()).map((q, i) => (
+                <div key={q.id} className="space-y-2">
+                  <Label className="text-xs text-gray-500">Q{i + 1}: {q.text}</Label>
+                  <Input
+                    dir={transLocale === "ar" ? "rtl" : "ltr"}
+                    placeholder={`Translate: ${q.text}`}
+                    value={qTrans[q.id]?.[transLocale] ?? ""}
+                    onChange={(e) =>
+                      setQTrans((prev) => ({
+                        ...prev,
+                        [q.id]: { ...prev[q.id], [transLocale]: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+              ))}
+              <p className="text-xs text-gray-400">
+                Employees receive the survey and email in their preferred language (set per employee). Button and system text are translated automatically.
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Actions */}
