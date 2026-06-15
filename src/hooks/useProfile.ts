@@ -22,6 +22,9 @@ export interface Profile {
   headcount_band: string | null;
   survey_expiry_days: number | null;
   data_retention_days: number | null;
+  response_rate_alert_pct: number | null;
+  min_cohort_display: number | null;
+  digest_emails_enabled: boolean | null;
   created_at: string;
 }
 

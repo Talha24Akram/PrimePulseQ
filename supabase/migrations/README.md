@@ -44,6 +44,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260616000001_responses_index.sql` | index on `responses(survey_id)` |
 | `20260616000002_survey_expiry_pref.sql` | `profiles.survey_expiry_days` (per-workspace token expiry) |
 | `20260616000003_data_retention.sql` | `profiles.data_retention_days` + `purge_old_responses()` |
+| `20260616000004_more_prefs.sql` | `profiles` response-rate alert / min-cohort / digest prefs |
 
 ## One-time setup after first deploy
 

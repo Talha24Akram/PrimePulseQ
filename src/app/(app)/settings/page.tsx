@@ -29,6 +29,9 @@ function SettingsInner() {
   const [company, setCompany] = useState({ name: "", slug: "", website: "", industry: "", headcountBand: "" });
   const [expiryDays, setExpiryDays] = useState<number>(7);
   const [retentionDays, setRetentionDays] = useState<string>(""); // "" = keep forever
+  const [alertPct, setAlertPct] = useState<number>(50);
+  const [minCohort, setMinCohort] = useState<number>(5);
+  const [digestEnabled, setDigestEnabled] = useState<boolean>(true);
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsSaved, setPrefsSaved] = useState(false);
   const NOTIF_KEY = "ppq_notification_prefs";
@@ -73,6 +76,9 @@ function SettingsInner() {
       });
       setExpiryDays(profile.survey_expiry_days ?? 7);
       setRetentionDays(profile.data_retention_days ? String(profile.data_retention_days) : "");
+      setAlertPct(profile.response_rate_alert_pct ?? 50);
+      setMinCohort(profile.min_cohort_display ?? 5);
+      setDigestEnabled(profile.digest_emails_enabled ?? true);
     }
   }, [profile]);
 
@@ -81,6 +87,9 @@ function SettingsInner() {
     await updateProfile({
       survey_expiry_days: expiryDays,
       data_retention_days: retentionDays ? Number(retentionDays) : null,
+      response_rate_alert_pct: Math.min(100, Math.max(0, alertPct)),
+      min_cohort_display: Math.min(20, Math.max(3, minCohort)),
+      digest_emails_enabled: digestEnabled,
     });
     setPrefsSaving(false);
     setPrefsSaved(true);
@@ -306,6 +315,39 @@ function SettingsInner() {
                   Automatically purge anonymous responses older than this. &ldquo;Keep forever&rdquo; never deletes.
                   Useful for GDPR / data-minimization requirements.
                 </p>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+                <div className="space-y-2">
+                  <Label>Low response-rate alert (%)</Label>
+                  <Input
+                    type="number" min={0} max={100}
+                    value={alertPct}
+                    onChange={(e) => setAlertPct(Number(e.target.value))}
+                  />
+                  <p className="text-xs text-gray-400">Surveys closing below this rate get flagged.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Minimum responses to show results</Label>
+                  <Input
+                    type="number" min={3} max={20}
+                    value={minCohort}
+                    onChange={(e) => setMinCohort(Number(e.target.value))}
+                  />
+                  <p className="text-xs text-gray-400">Anonymity floor before results/open-text appear (3–20).</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between max-w-md">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Digest emails</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Receive summary digest emails for your team.</p>
+                </div>
+                <Switch checked={digestEnabled} onCheckedChange={setDigestEnabled} />
               </div>
 
               <div className="flex items-center gap-3">
