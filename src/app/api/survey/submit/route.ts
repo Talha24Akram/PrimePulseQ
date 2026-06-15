@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// TODO(rate-limit): This is a DB-backed counter (works across serverless
-// instances) but not a true distributed sliding-window limiter. For higher
-// scale, move to Redis / Upstash with a sliding-window or token-bucket algorithm.
-// TODO(tests): Add an integration test that exercises this route end-to-end
-// (valid token submit, reused token, expired token, rate-limit exhaustion).
+// TODO(rate-limit): DB-backed sliding-window counter (works across serverless
+// instances). For very high scale, move to Redis / Upstash with a native
+// sliding-window or token-bucket algorithm.
 const RATE_LIMIT_MAX = 5;
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 
 // Hash the IP so raw addresses are never stored in the DB.
 async function hashIp(ip: string): Promise<string> {
@@ -16,21 +14,21 @@ async function hashIp(ip: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
 }
 
-// Serverless-safe: persists across Vercel function instances via DB.
+// Serverless-safe sliding window: persists across Vercel function instances via
+// the DB (see migration 20260615000001_sliding_window_rate_limit.sql).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
   try {
     const ipHash = await hashIp(ip);
-    const resetAt = new Date(Date.now() + RATE_LIMIT_WINDOW_MS).toISOString();
-    const { data } = await supabase.rpc("increment_rate_limit", {
+    const { data } = await supabase.rpc("check_rate_limit_sliding", {
       p_ip_hash: ipHash,
-      p_reset_at: resetAt,
+      p_window_seconds: RATE_LIMIT_WINDOW_SECONDS,
       p_max: RATE_LIMIT_MAX,
     });
     const count = typeof data === "number" ? data : Number(data);
     return count <= RATE_LIMIT_MAX;
   } catch {
-    // If rate limit DB call fails, allow the request rather than blocking all submissions.
+    // If the rate-limit call fails, allow the request rather than blocking all submissions.
     return true;
   }
 }
@@ -74,57 +72,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Validate token — re-check all conditions atomically before inserting
-  const { data: tokenRow, error: tokenError } = await supabase
-    .from("survey_tokens")
-    .select("token, survey_id, used, expires_at")
-    .eq("token", token)
-    .single();
-
-  if (tokenError || !tokenRow) {
-    return NextResponse.json({ error: "Invalid or expired link" }, { status: 404 });
-  }
-
-  if (tokenRow.used) {
-    return NextResponse.json({ error: "This survey link has already been used" }, { status: 410 });
-  }
-
-  if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) {
-    return NextResponse.json({ error: "This survey link has expired" }, { status: 410 });
-  }
-
-  // Verify the survey is still active
-  const { data: survey } = await supabase
-    .from("surveys")
-    .select("status")
-    .eq("id", tokenRow.survey_id)
-    .single();
-
-  if (!survey || survey.status !== "active") {
-    return NextResponse.json({ error: "This survey is no longer accepting responses" }, { status: 410 });
-  }
-
-  // TODO(atomic-submit): The insert + mark-used below are two sequential calls,
-  // not one transaction. A crash between them could leave a response saved with
-  // the token still unused (allowing a duplicate). Move both into a single
-  // Postgres RPC/transaction (SECURITY DEFINER) so submit is atomic.
-
-  // Insert anonymous response — no employee_id, just survey_id and answers
-  const { error: insertError } = await supabase.from("responses").insert({
-    survey_id: tokenRow.survey_id,
-    answers,
+  // Atomic submit: validate token + insert response + mark used in one
+  // transaction (see migration 20260615000000_atomic_submit_response.sql).
+  // A SELECT ... FOR UPDATE row lock inside the function serializes concurrent
+  // submissions for the same token, so a token can never be used twice.
+  const { data: result, error: rpcError } = await supabase.rpc("submit_survey_response", {
+    p_token: token,
+    p_answers: answers,
   });
 
-  if (insertError) {
-    console.error("Response insert error:", insertError.message);
+  if (rpcError) {
+    console.error("submit_survey_response error:", rpcError.message);
     return NextResponse.json({ error: "Failed to save response" }, { status: 500 });
   }
 
-  // Mark token as used — prevents resubmission
-  await supabase
-    .from("survey_tokens")
-    .update({ used: true })
-    .eq("token", token);
-
-  return NextResponse.json({ ok: true });
+  switch (result) {
+    case "ok":
+      return NextResponse.json({ ok: true });
+    case "not_found":
+      return NextResponse.json({ error: "Invalid or expired link" }, { status: 404 });
+    case "already_used":
+      return NextResponse.json({ error: "This survey link has already been used" }, { status: 410 });
+    case "expired":
+      return NextResponse.json({ error: "This survey link has expired" }, { status: 410 });
+    case "closed":
+      return NextResponse.json({ error: "This survey is no longer accepting responses" }, { status: 410 });
+    default:
+      console.error("submit_survey_response unexpected result:", result);
+      return NextResponse.json({ error: "Failed to save response" }, { status: 500 });
+  }
 }

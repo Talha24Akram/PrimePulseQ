@@ -60,16 +60,14 @@ npm install
 ### 2. Set up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor** and run the full contents of
-   `supabase/migrations/001_initial_schema.sql`. This creates all tables, the
-   `increment_rate_limit()` function, and Row Level Security policies.
-3. **If you ran an older version of the schema**, apply the incremental
-   `alter table ... add column if not exists ...` statements that are commented
-   at the top of each table block in the same file (e.g. `email_opted_out`,
-   `slack_webhook_url`, `teams_webhook_url`, `questions.required`).
-4. After signing up in the app, mark yourself owner (see the commented block at
-   the bottom of the migration file).
-5. Copy your project URL, anon key, and **service role key** from
+2. Apply the migrations in `supabase/migrations/` in ascending filename order.
+   Either run `supabase db push` (tracks applied migrations), or paste each
+   `.sql` file into the **SQL Editor** oldest-first. This creates all tables, the
+   `handle_new_user` trigger, rate limiting, the atomic submit RPC, and Row Level
+   Security policies. See `supabase/migrations/README.md` for the full convention.
+3. After signing up in the app, mark yourself owner (see the one-time setup
+   snippet in `supabase/migrations/README.md`).
+4. Copy your project URL, anon key, and **service role key** from
    **Project Settings → API**.
 
 ### 3. Configure environment variables
@@ -155,19 +153,29 @@ npm run format     # prettier --write .
 
 ## Known limitations
 
-- **Rate limiting** is database-backed (`increment_rate_limit`) and works across
-  serverless instances, but is not a full distributed limiter (no sliding window
-  / Redis). Adequate for current scale. See `TODO` in `src/app/api/survey/submit/route.ts`.
-- **Token submission is not a single atomic transaction** — validation, response
-  insert, and marking the token `used` are sequential service-role calls. A crash
-  between insert and mark could in theory allow a duplicate; acceptable for now.
-  See `TODO` in the submit route.
+- **Rate limiting** is a database-backed **sliding window**
+  (`check_rate_limit_sliding`), so it works across serverless instances and is
+  not vulnerable to fixed-window boundary bursts. For very high scale, a
+  dedicated Redis/Upstash limiter would still be lower-latency. See the `TODO`
+  in `src/app/api/survey/submit/route.ts`.
+- **Token submission is atomic** — validation, response insert, and marking the
+  token `used` run in one Postgres function (`submit_survey_response`) with a
+  `SELECT … FOR UPDATE` row lock, so a token can't be used twice even under
+  concurrent requests. (True multi-connection concurrency is covered by the row
+  lock; the integration test verifies the sequential reuse guarantee.)
 - **Insights & Action Plan are rule-based**, not AI-generated. The logic lives in
   `src/lib/insights.ts` with a stable `InsightInput` contract designed to be the
   future LLM payload. See `TODO(ai-insights)` there.
-- **No automated E2E tests** yet. Vitest unit tests live in `src/__tests__/`
-  (`utils`, `token-validation`, `rate-limit`, `insights`) — run `npm test`
-  (33 tests). API routes are not yet covered end-to-end.
+- **PDF export is text/table only** — `src/lib/export-pdf.ts` builds the PDF with
+  jsPDF's native vector/text API (crisp, selectable text). It does **not** embed
+  the Recharts charts; a server-side render (Puppeteer / `@react-pdf/renderer`)
+  would be needed for charts in the PDF.
+- **Test coverage**: Vitest suites in `src/__tests__/` cover `utils`,
+  `token-validation`, `rate-limit`, `insights`, the submit status mapping, and a
+  **real Postgres integration test** (`db-integration`, via PGlite) that applies
+  the migrations and exercises the atomic submit + sliding-window functions.
+  Run `npm test`. Full browser E2E (Playwright) and automated cross-tenant RLS
+  isolation tests are still outstanding.
 - **Department scores are intentionally not computed** — anonymity means responses
   can't be linked to a department; only headcount distribution is shown.
 

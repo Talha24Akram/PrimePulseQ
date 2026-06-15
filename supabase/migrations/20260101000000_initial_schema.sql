@@ -1,6 +1,9 @@
 -- ============================================================
--- PrimePulseQ — Full Database Schema
--- Run this in: Supabase Dashboard → SQL Editor → New query → paste → Run
+-- 20260101000000_initial_schema
+-- Baseline schema for PrimePulseQ.
+--
+-- Apply order: run every file in supabase/migrations in ascending
+-- filename (timestamp) order. See supabase/migrations/README.md.
 -- ============================================================
 
 -- ── PROFILES ────────────────────────────────────────────────
@@ -25,10 +28,6 @@ create table if not exists profiles (
   created_at          timestamptz default now(),
   updated_at          timestamptz default now()
 );
-
--- Run these separately if the table already exists:
--- alter table profiles add column if not exists slack_webhook_url text;
--- alter table profiles add column if not exists teams_webhook_url text;
 
 -- Auto-create profile when a user signs up
 create or replace function handle_new_user()
@@ -65,9 +64,6 @@ create table if not exists employees (
   unique(workspace_id, email)
 );
 
--- Run this separately if table already exists:
--- alter table employees add column if not exists email_opted_out boolean default false;
-
 -- ── SURVEYS ─────────────────────────────────────────────────
 create table if not exists surveys (
   id           uuid default gen_random_uuid() primary key,
@@ -95,9 +91,6 @@ create table if not exists questions (
   order_index integer default 0,
   created_at  timestamptz default now()
 );
-
--- Run this separately if the table already exists:
--- alter table questions add column if not exists required boolean default true;
 
 -- ── SURVEY TOKENS (one per employee per survey) ──────────────
 -- Token is used to open the survey; employee identity is NOT stored in responses
@@ -142,43 +135,6 @@ create table if not exists slack_integrations (
   created_at      timestamptz default now()
 );
 
--- ── RATE LIMITS (serverless-safe, keyed by hashed IP) ────────
--- Stores request counts per IP window. No user data — service role only.
-create table if not exists rate_limits (
-  ip_hash  text primary key,
-  count    int not null default 1,
-  reset_at timestamptz not null
-);
-
--- Atomic upsert: increments counter or resets if window has expired.
--- Returns the NEW count so the caller can decide to allow/block.
-create or replace function increment_rate_limit(
-  p_ip_hash text,
-  p_reset_at timestamptz,
-  p_max int
-) returns int language plpgsql security definer as $$
-declare
-  v_count int;
-begin
-  insert into rate_limits (ip_hash, count, reset_at)
-  values (p_ip_hash, 1, p_reset_at)
-  on conflict (ip_hash) do update
-    set count    = case
-                     when rate_limits.reset_at <= now() then 1
-                     else least(rate_limits.count + 1, p_max + 1)
-                   end,
-        reset_at = case
-                     when rate_limits.reset_at <= now() then p_reset_at
-                     else rate_limits.reset_at
-                   end
-  returning count into v_count;
-  return v_count;
-end;
-$$;
-
--- No RLS policies for rate_limits — service role only access.
-alter table rate_limits enable row level security;
-
 -- ── API KEYS (Enterprise) ────────────────────────────────────
 create table if not exists api_keys (
   id           uuid default gen_random_uuid() primary key,
@@ -217,11 +173,3 @@ create policy "responses_read"  on responses          for select using (survey_i
 create policy "audit_own"       on audit_logs         for all using (workspace_id = auth.uid());
 create policy "slack_own"       on slack_integrations for all using (workspace_id = auth.uid());
 create policy "apikeys_own"     on api_keys           for all using (workspace_id = auth.uid());
-
--- ============================================================
--- MARK YOURSELF AS OWNER (run this separately after signing up)
--- Replace with your actual email address:
--- ============================================================
--- update profiles
--- set is_owner = true, subscription_tier = 'enterprise'
--- where email = 'your@email.com';

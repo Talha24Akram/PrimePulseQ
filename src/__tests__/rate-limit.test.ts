@@ -3,34 +3,38 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
-// Simulate the DB-backed rate limit logic in isolation
-// (mirrors the increment_rate_limit PostgreSQL function behaviour)
-class FakeRateLimitStore {
-  private map = new Map<string, { count: number; resetAt: number }>();
+// Mirror of the sliding-window logic in check_rate_limit_sliding() — one record
+// per request, count only those within the trailing window from *now*.
+// (See migration 20260615000001_sliding_window_rate_limit.sql.)
+class SlidingWindowStore {
+  private events = new Map<string, number[]>(); // ip -> request timestamps
 
-  increment(ipHash: string, max: number): number {
+  check(ipHash: string, max: number, windowMs: number): number {
     const now = Date.now();
-    const entry = this.map.get(ipHash);
-    if (!entry || now >= entry.resetAt) {
-      this.map.set(ipHash, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-      return 1;
+    const cutoff = now - windowMs;
+    const kept = (this.events.get(ipHash) ?? []).filter((t) => t >= cutoff);
+
+    if (kept.length >= max) {
+      this.events.set(ipHash, kept); // rejected — do not record
+      return kept.length + 1;
     }
-    const next = Math.min(entry.count + 1, max + 1);
-    entry.count = next;
-    return next;
+    kept.push(now);
+    this.events.set(ipHash, kept);
+    return kept.length;
   }
 }
 
-function makeChecker(store: FakeRateLimitStore) {
-  return (ipHash: string): boolean => store.increment(ipHash, RATE_LIMIT_MAX) <= RATE_LIMIT_MAX;
+function makeChecker(store: SlidingWindowStore) {
+  return (ipHash: string): boolean =>
+    store.check(ipHash, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS) <= RATE_LIMIT_MAX;
 }
 
-describe("DB-backed rate limiter logic", () => {
-  let store: FakeRateLimitStore;
+describe("sliding-window rate limiter logic", () => {
+  let store: SlidingWindowStore;
   let check: (ip: string) => boolean;
 
   beforeEach(() => {
-    store = new FakeRateLimitStore();
+    store = new SlidingWindowStore();
     check = makeChecker(store);
   });
 
@@ -54,16 +58,37 @@ describe("DB-backed rate limiter logic", () => {
     expect(check("ip-e")).toBe(true);
   });
 
-  it("resets after the window expires", () => {
+  it("restores capacity once requests age out of the window", () => {
     vi.useFakeTimers();
-    const now = Date.now();
-    vi.setSystemTime(now);
+    const t0 = Date.now();
+    vi.setSystemTime(t0);
 
-    for (let i = 0; i < RATE_LIMIT_MAX; i++) check("ip-f");
+    // Exhaust the window with 5 requests (all at t0), then the 6th is blocked.
+    for (let i = 0; i < RATE_LIMIT_MAX; i++) expect(check("ip-f")).toBe(true);
     expect(check("ip-f")).toBe(false);
 
-    vi.setSystemTime(now + RATE_LIMIT_WINDOW_MS + 1);
+    // After the full window passes, all 5 (made at t0) have aged out → allowed again.
+    vi.setSystemTime(t0 + RATE_LIMIT_WINDOW_MS + 1);
     expect(check("ip-f")).toBe(true);
+
+    vi.useRealTimers();
+  });
+
+  it("does not reset the whole window at once (boundary burst is bounded)", () => {
+    vi.useFakeTimers();
+    const t0 = Date.now();
+    vi.setSystemTime(t0);
+
+    // 5 requests spread across the window
+    for (let i = 0; i < RATE_LIMIT_MAX; i++) {
+      vi.setSystemTime(t0 + i * 1000);
+      expect(check("ip-g")).toBe(true);
+    }
+    // Just after the window from t0: only the first request has aged out,
+    // so at most one new request is allowed — NOT a fresh batch of 5.
+    vi.setSystemTime(t0 + RATE_LIMIT_WINDOW_MS + 500);
+    expect(check("ip-g")).toBe(true);
+    expect(check("ip-g")).toBe(false);
 
     vi.useRealTimers();
   });
