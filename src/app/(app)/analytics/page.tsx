@@ -57,6 +57,11 @@ export default function AnalyticsPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [addedRecs, setAddedRecs] = useState<Set<number>>(new Set());
   const [actionsTaken, setActionsTaken] = useState(0);
+  const [benchmark, setBenchmark] = useState<{
+    configured: boolean; eligible?: boolean; completedCycles?: number;
+    industry?: string; headcountBand?: string; cohortSize?: number;
+    p25?: number | null; p50?: number | null; p75?: number | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -287,6 +292,17 @@ export default function AnalyticsPage() {
       .then((d: AIInsight | null) => { if (!cancelled) setAiInsight(d); })
       .catch(() => { if (!cancelled) setAiInsight(null); })
       .finally(() => { if (!cancelled) setAiLoading(false); });
+
+    // Contribute this week's score (if eligible) and read cohort percentiles.
+    fetch("/api/benchmark", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentScore }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled) setBenchmark(d); })
+      .catch(() => { if (!cancelled) setBenchmark(null); });
+
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, hasData, currentScore, prevScore, avgResponseRate, burnoutPct, enps, totalResponses, totalEmployees]);
@@ -795,6 +811,71 @@ export default function AnalyticsPage() {
                     Generated from anonymous aggregate metrics only — no individual responses are sent. Use as a starting point, not a substitute for talking to your team.
                   </p>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Industry benchmark */}
+          <Card className="mt-6">
+            <CardHeader>
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className="text-base">Industry benchmark</CardTitle>
+                {benchmark?.industry && (
+                  <Badge variant="secondary" className="text-[10px]">{benchmark.industry} · {benchmark.headcountBand}</Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!benchmark ? (
+                <p className="text-sm text-gray-400">Loading benchmark…</p>
+              ) : !benchmark.configured ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Set your <strong>industry</strong> and <strong>company size</strong> in{" "}
+                  <button onClick={() => router.push("/settings")} className="text-violet-600 dark:text-violet-400 hover:underline">Settings</button>{" "}
+                  to compare against similar companies.
+                </p>
+              ) : benchmark.p50 == null ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Not enough companies in your {benchmark.industry} · {benchmark.headcountBand} cohort yet
+                  ({benchmark.cohortSize} so far). Benchmarks unlock at 3 to keep every company anonymous.
+                  {benchmark.eligible === false && " Your data joins the pool after 3 completed survey cycles."}
+                </p>
+              ) : (
+                (() => {
+                  const lo = Math.min(benchmark.p25 ?? 0, currentScore) - 5;
+                  const hi = Math.max(benchmark.p75 ?? 100, currentScore) + 5;
+                  const span = Math.max(hi - lo, 1);
+                  const pos = (v: number) => `${Math.min(100, Math.max(0, ((v - lo) / span) * 100))}%`;
+                  return (
+                    <div className="pt-2">
+                      <div className="relative h-16">
+                        {/* p25–p75 band */}
+                        <div
+                          className="absolute top-6 h-3 rounded-full bg-violet-100 dark:bg-violet-500/20"
+                          style={{ left: pos(benchmark.p25 ?? 0), right: `calc(100% - ${pos(benchmark.p75 ?? 100)})` }}
+                        />
+                        {/* median marker */}
+                        <div className="absolute top-4 -translate-x-1/2 flex flex-col items-center" style={{ left: pos(benchmark.p50 ?? 0) }}>
+                          <div className="h-7 w-0.5 bg-violet-400" />
+                          <span className="text-[10px] text-gray-400 mt-0.5">median {Math.round(benchmark.p50 ?? 0)}</span>
+                        </div>
+                        {/* your score marker */}
+                        <div className="absolute top-0 -translate-x-1/2 flex flex-col items-center" style={{ left: pos(currentScore) }}>
+                          <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">You {currentScore}</span>
+                          <div className="h-9 w-1 bg-violet-600 rounded-full" />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-500 mt-3">
+                        <span>p25: {Math.round(benchmark.p25 ?? 0)}</span>
+                        <span>p75: {Math.round(benchmark.p75 ?? 0)}</span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
+                        Anonymized across {benchmark.cohortSize} companies in your industry and size band. Your score
+                        is {currentScore >= (benchmark.p50 ?? 0) ? "at or above" : "below"} the cohort median.
+                      </p>
+                    </div>
+                  );
+                })()
               )}
             </CardContent>
           </Card>

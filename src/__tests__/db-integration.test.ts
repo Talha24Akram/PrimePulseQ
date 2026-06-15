@@ -41,7 +41,25 @@ beforeAll(async () => {
   await db.exec(migration("20260615000004_actions.sql"));
   await db.exec(migration("20260615000005_question_library_and_templates.sql"));
   await db.exec(migration("20260615000006_survey_i18n.sql"));
+  await db.exec(migration("20260615000007_benchmarks.sql"));
 }, 60000);
+
+async function seedSnapshot(industry: string, band: string, score: number) {
+  const userId = await newUser();
+  await db.query(
+    `insert into benchmark_snapshots (workspace_id, week_start, industry, headcount_band, avg_score)
+     values ($1, current_date, $2, $3, $4)`,
+    [userId, industry, band, score]
+  );
+  return userId;
+}
+
+async function getBenchmark(industry: string, band: string) {
+  const r = await db.query<{ p25: number | null; p50: number | null; p75: number | null; cohort_size: number }>(
+    `select * from get_benchmark($1, $2)`, [industry, band]
+  );
+  return r.rows[0];
+}
 
 async function newUser(): Promise<string> {
   return (await db.query<{ id: string }>(
@@ -215,6 +233,35 @@ describe("claim_owner", () => {
       `select is_owner from profiles where id = $1`, [second]
     )).rows[0].is_owner;
     expect(isOwner).toBe(false);
+  });
+});
+
+// ── #3 industry benchmarks ───────────────────────────────────
+describe("get_benchmark", () => {
+  it("hides percentiles until a cohort has at least 3 distinct orgs", async () => {
+    await seedSnapshot("Solo", "1-50", 70);
+    await seedSnapshot("Solo", "1-50", 80);
+    const r = await getBenchmark("Solo", "1-50");
+    expect(r.cohort_size).toBe(2);
+    expect(r.p50).toBeNull(); // k-anonymity: not enough orgs
+  });
+
+  it("returns percentiles once the cohort reaches 3 orgs", async () => {
+    await seedSnapshot("Tech", "51-200", 40);
+    await seedSnapshot("Tech", "51-200", 60);
+    await seedSnapshot("Tech", "51-200", 80);
+    const r = await getBenchmark("Tech", "51-200");
+    expect(r.cohort_size).toBe(3);
+    expect(Number(r.p50)).toBe(60);
+    expect(Number(r.p25)).toBeLessThanOrEqual(Number(r.p50));
+    expect(Number(r.p75)).toBeGreaterThanOrEqual(Number(r.p50));
+  });
+
+  it("keeps cohorts separate by industry + size band", async () => {
+    await seedSnapshot("Retail", "1000+", 90);
+    const r = await getBenchmark("Retail", "1000+");
+    expect(r.cohort_size).toBe(1);
+    expect(r.p50).toBeNull();
   });
 });
 

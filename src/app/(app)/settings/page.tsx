@@ -25,7 +25,7 @@ export default function SettingsPage() {
 
 function SettingsInner() {
   const { profile, loading: profileLoading, updateProfile } = useProfile();
-  const [company, setCompany] = useState({ name: "", slug: "", website: "" });
+  const [company, setCompany] = useState({ name: "", slug: "", website: "", industry: "", headcountBand: "" });
   const NOTIF_KEY = "ppq_notification_prefs";
   const [notifications, setNotifications] = useState(() => {
     if (typeof window !== "undefined") {
@@ -63,6 +63,8 @@ function SettingsInner() {
         name: profile.company_name ?? "",
         slug: profile.company_slug ?? "",
         website: profile.company_website ?? "",
+        industry: profile.industry ?? "",
+        headcountBand: profile.headcount_band ?? "",
       });
     }
   }, [profile]);
@@ -74,6 +76,8 @@ function SettingsInner() {
       company_name: company.name || null,
       company_slug: company.slug || null,
       company_website: company.website || null,
+      industry: company.industry || null,
+      headcount_band: company.headcountBand || null,
     });
     setSaving(false);
     if (error) {
@@ -156,6 +160,35 @@ function SettingsInner() {
                   placeholder="https://"
                 />
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Industry</Label>
+                  <select
+                    value={company.industry}
+                    onChange={(e) => setCompany((p) => ({ ...p, industry: e.target.value }))}
+                    className="w-full h-10 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 text-sm text-gray-700 dark:text-gray-200"
+                  >
+                    <option value="">Select industry…</option>
+                    {["Technology","Healthcare","Finance","Retail","Manufacturing","Education","Hospitality","Professional Services","Non-profit","Other"].map((i) => (
+                      <option key={i} value={i}>{i}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Company size</Label>
+                  <select
+                    value={company.headcountBand}
+                    onChange={(e) => setCompany((p) => ({ ...p, headcountBand: e.target.value }))}
+                    className="w-full h-10 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 text-sm text-gray-700 dark:text-gray-200"
+                  >
+                    <option value="">Select size…</option>
+                    {["1-50","51-200","201-1000","1000+"].map((b) => (
+                      <option key={b} value={b}>{b} employees</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400">Used to anonymously benchmark your scores against similar companies.</p>
               {saveError && (
                 <div className="p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-sm text-red-600 dark:text-red-400">
                   {saveError}

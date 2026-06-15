@@ -18,6 +18,8 @@ export interface Profile {
   paddle_customer_id: string | null;
   slack_webhook_url: string | null;
   teams_webhook_url: string | null;
+  industry: string | null;
+  headcount_band: string | null;
   created_at: string;
 }
 
