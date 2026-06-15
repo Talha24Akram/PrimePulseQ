@@ -63,6 +63,7 @@ beforeAll(async () => {
   await db.exec(mig("20260615000000_atomic_submit_response.sql"));
   await db.exec(mig("20260615000001_sliding_window_rate_limit.sql"));
   await db.exec(mig("20260615000004_actions.sql"));
+  await db.exec(mig("20260615000005_question_library_and_templates.sql"));
 
   // A real Supabase-style non-superuser role that RLS actually applies to.
   await db.exec(`
@@ -140,6 +141,36 @@ describe("RLS cross-tenant isolation", () => {
     // Confirm B has no injected row.
     const count = (await db.query<{ c: number }>(`select count(*)::int c from actions where workspace_id = $1`, [orgB.userId])).rows[0].c;
     expect(count).toBe(1);
+  });
+
+  it("every tenant can read the 6 global starter templates", async () => {
+    const aRows = await asUser(orgA.userId, `select id from survey_templates where is_starter = true`);
+    expect(aRows.length).toBe(6);
+  });
+
+  it("a tenant cannot create a global (workspace_id null) template", async () => {
+    await db.exec(`set role authenticated; set "test.uid" = '${orgA.userId}';`);
+    let failed = false;
+    try {
+      await db.query(`insert into survey_templates (workspace_id, name, questions) values (null, 'global hack', '[]'::jsonb)`);
+    } catch {
+      failed = true;
+    } finally {
+      await db.exec(`set "test.uid" = ''; reset role;`);
+    }
+    expect(failed).toBe(true);
+  });
+
+  it("a tenant's private template is not visible to another tenant", async () => {
+    // org A saves a private template
+    await db.exec(`set role authenticated; set "test.uid" = '${orgA.userId}';`);
+    await db.query(`insert into survey_templates (workspace_id, name, questions) values ('${orgA.userId}', 'A private', '[]'::jsonb)`);
+    await db.exec(`set "test.uid" = ''; reset role;`);
+
+    const aPrivate = await asUser(orgA.userId, `select id from survey_templates where workspace_id = '${orgA.userId}'`);
+    const bPrivate = await asUser(orgB.userId, `select id from survey_templates where name = 'A private'`);
+    expect(aPrivate.length).toBe(1);
+    expect(bPrivate.length).toBe(0);
   });
 
   it("an anonymous user (no auth.uid) sees no surveys or responses", async () => {

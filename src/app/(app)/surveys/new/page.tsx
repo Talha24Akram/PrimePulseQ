@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, BookmarkPlus, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,15 @@ const templates = [
   },
 ];
 
+interface TemplateItem {
+  id?: string;
+  name: string;
+  description: string;
+  category?: string | null;
+  isStarter?: boolean;
+  questions: { text: string; type: QuestionType; options: string[]; required: boolean }[];
+}
+
 function generateId() {
   return Math.random().toString(36).substring(2, 9);
 }
@@ -65,6 +74,53 @@ export default function NewSurveyPage() {
   ]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [dbTemplates, setDbTemplates] = useState<TemplateItem[]>([]);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateSaved, setTemplateSaved] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("survey_templates")
+      .select("id, name, description, category, is_starter, questions")
+      .order("is_starter", { ascending: false })
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (!data) return;
+        setDbTemplates(
+          data.map((t) => ({
+            id: t.id as string,
+            name: t.name as string,
+            description: (t.description as string) ?? "",
+            category: t.category as string | null,
+            isStarter: t.is_starter as boolean,
+            questions: (t.questions as TemplateItem["questions"]) ?? [],
+          }))
+        );
+      });
+  }, []);
+
+  async function saveAsTemplate() {
+    const valid = questions.filter((q) => q.text.trim());
+    if (!title.trim() || valid.length === 0) {
+      setSaveError("Add a title and at least one question before saving as a template.");
+      return;
+    }
+    setSavingTemplate(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingTemplate(false); return; }
+    await supabase.from("survey_templates").insert({
+      workspace_id: user.id,
+      name: title.trim(),
+      description: description.trim() || null,
+      is_starter: false,
+      questions: valid.map((q) => ({ text: q.text, type: q.type, options: q.options, required: q.required })),
+    });
+    setSavingTemplate(false);
+    setTemplateSaved(true);
+    setTimeout(() => setTemplateSaved(false), 2500);
+  }
 
   function addQuestion() {
     setQuestions((prev) => [
@@ -105,10 +161,17 @@ export default function NewSurveyPage() {
     );
   }
 
-  function applyTemplate(template: typeof templates[0]) {
+  function applyTemplate(template: TemplateItem) {
     setTitle(template.name);
+    if (template.description) setDescription(template.description);
     setQuestions(
-      template.questions.map((q) => ({ ...q, id: generateId() }))
+      template.questions.map((q) => ({
+        id: generateId(),
+        text: q.text,
+        type: q.type,
+        options: q.options ?? [],
+        required: q.required ?? false,
+      }))
     );
   }
 
@@ -208,15 +271,25 @@ export default function NewSurveyPage() {
       {/* Templates */}
       <div className="mb-8">
         <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">Start from a template</p>
-        <div className="flex gap-3 flex-wrap">
-          {templates.map((template) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {(dbTemplates.length ? dbTemplates : (templates as TemplateItem[])).map((template) => (
             <button
-              key={template.name}
+              key={template.id ?? template.name}
               onClick={() => applyTemplate(template)}
+              title={template.questions.map((q) => `• ${q.text}`).join("\n")}
               className="text-left p-4 rounded-xl border border-gray-200 bg-white shadow-sm hover:border-violet-400 hover:bg-violet-50 dark:border-white/10 dark:bg-white/5 dark:shadow-none dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 transition-all duration-200 hover:-translate-y-0.5 group cursor-pointer"
             >
-              <p className="font-medium text-gray-800 dark:text-gray-200 text-sm group-hover:text-violet-700 dark:group-hover:text-violet-300">{template.name}</p>
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <p className="font-medium text-gray-800 dark:text-gray-200 text-sm group-hover:text-violet-700 dark:group-hover:text-violet-300">{template.name}</p>
+                {(template as TemplateItem).isStarter === false && (
+                  <Badge variant="secondary" className="text-[10px]">Saved</Badge>
+                )}
+              </div>
               <p className="text-xs text-gray-500 mt-0.5">{template.description}</p>
+              <p className="text-[11px] text-gray-400 mt-2">
+                {template.questions.length} question{template.questions.length !== 1 ? "s" : ""}
+                {(template as TemplateItem).category ? ` · ${(template as TemplateItem).category}` : ""}
+              </p>
             </button>
           ))}
         </div>
@@ -400,6 +473,9 @@ export default function NewSurveyPage() {
           <Button variant="ghost" className="w-full sm:w-auto">Cancel</Button>
         </Link>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Button variant="ghost" onClick={saveAsTemplate} disabled={savingTemplate} className="w-full sm:w-auto gap-2">
+            {templateSaved ? <><Check className="h-4 w-4" />Saved as template</> : <><BookmarkPlus className="h-4 w-4" />{savingTemplate ? "Saving…" : "Save as template"}</>}
+          </Button>
           <Button variant="outline" onClick={() => handleSave("draft")} disabled={saving} className="w-full sm:w-auto">
             Save as draft
           </Button>
