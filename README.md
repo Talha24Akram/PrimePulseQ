@@ -16,13 +16,13 @@ results into engagement trends, burnout signals, and a rule-based action plan.
 - Slack & Teams webhook notifications
 - Email delivery + unsubscribe handling (CAN-SPAM / GDPR friendly)
 - 4-tier plans: Free / Starter / Growth / Enterprise (Paddle billing)
-- Light & dark mode
+- Polished dark-mode UI
 
 ## Tech Stack
 
 | Layer | Tech |
 |---|---|
-| Framework | Next.js 14 (App Router), React 19, TypeScript |
+| Framework | Next.js 16 (App Router), React 19, TypeScript |
 | Styling | Tailwind CSS v4 (`@variant dark` + `data-theme`), Radix UI primitives |
 | Charts | Recharts |
 | Auth + Database | Supabase (PostgreSQL + Row Level Security) |
@@ -165,8 +165,9 @@ npm run format     # prettier --write .
 - **Insights & Action Plan are rule-based**, not AI-generated. The logic lives in
   `src/lib/insights.ts` with a stable `InsightInput` contract designed to be the
   future LLM payload. See `TODO(ai-insights)` there.
-- **No automated E2E tests** yet — Vitest covers utils, token validation, and
-  rate-limit logic only.
+- **No automated E2E tests** yet. Vitest unit tests live in `src/__tests__/`
+  (`utils`, `token-validation`, `rate-limit`, `insights`) — run `npm test`
+  (33 tests). API routes are not yet covered end-to-end.
 - **Department scores are intentionally not computed** — anonymity means responses
   can't be linked to a department; only headcount distribution is shown.
 

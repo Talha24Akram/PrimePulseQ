@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 interface PublicNavProps {
   /** Hide auth buttons (e.g. on login/signup pages themselves) */
@@ -32,7 +31,6 @@ export function PublicNav({ hideAuth = false }: PublicNavProps) {
 
         {/* Right side */}
         <div className="flex items-center gap-3">
-          <ThemeToggle />
           {!hideAuth && (
             <>
               <Link

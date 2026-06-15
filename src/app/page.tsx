@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Shield, Zap, BarChart3, CheckCircle2, Users, TrendingUp, Lock, LayoutDashboard, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LandingPage() {
@@ -31,7 +30,6 @@ export default function LandingPage() {
             <Link href="/pricing" className="text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors">Pricing</Link>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             {isLoggedIn ? (
               <Link href="/dashboard">
                 <Button size="sm" className="gap-2">

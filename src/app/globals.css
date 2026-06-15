@@ -1,13 +1,10 @@
 @import "tailwindcss";
 
-/* Override Tailwind v4's built-in dark variant (replaces prefers-color-scheme) */
+/* Dark-mode only. `data-theme="dark"` is pinned on <html>; the dark variant
+   below keeps every `dark:` utility class active across the app. */
 @variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-:root {
-  --background: #ffffff;
-  --foreground: #0a0a12;
-}
-
+:root,
 [data-theme="dark"] {
   --background: #07070d;
   --foreground: #f5f5fa;

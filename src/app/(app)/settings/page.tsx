@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
-import { useTheme } from "next-themes";
 import { useSearchParams } from "next/navigation";
-import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2, Sun, Moon, ClipboardList, ExternalLink, Loader2, ArrowRight } from "lucide-react";
+import { Building2, Bell, Shield, CreditCard, Zap, CheckCircle2, Sun, ClipboardList, ExternalLink, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +24,6 @@ export default function SettingsPage() {
 }
 
 function SettingsInner() {
-  const { theme, setTheme } = useTheme();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [company, setCompany] = useState({ name: "", slug: "", website: "" });
   const NOTIF_KEY = "ppq_notification_prefs";
@@ -220,49 +218,17 @@ function SettingsInner() {
           </Card>
         </TabsContent>
 
-        {/* Preferences */}
+        {/* Preferences — intentionally empty for now; more settings coming soon */}
         <TabsContent value="preferences">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Appearance</CardTitle>
-              <CardDescription>Choose how PrimePulseQ looks for you.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setTheme("light")}
-                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
-                    theme === "light"
-                      ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10"
-                      : "border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20"
-                  }`}
-                >
-                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${theme === "light" ? "bg-violet-100 dark:bg-violet-500/20" : "bg-gray-100 dark:bg-white/8"}`}>
-                    <Sun className={`h-5 w-5 ${theme === "light" ? "text-violet-600 dark:text-violet-400" : "text-gray-500 dark:text-gray-400"}`} />
-                  </div>
-                  <div>
-                    <p className={`font-medium text-sm ${theme === "light" ? "text-violet-700 dark:text-violet-300" : "text-gray-700 dark:text-gray-200"}`}>Light</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Clean and bright</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setTheme("dark")}
-                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
-                    theme === "dark"
-                      ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10"
-                      : "border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20"
-                  }`}
-                >
-                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${theme === "dark" ? "bg-violet-100 dark:bg-violet-500/20" : "bg-gray-100 dark:bg-white/8"}`}>
-                    <Moon className={`h-5 w-5 ${theme === "dark" ? "text-violet-600 dark:text-violet-400" : "text-gray-500 dark:text-gray-400"}`} />
-                  </div>
-                  <div>
-                    <p className={`font-medium text-sm ${theme === "dark" ? "text-violet-700 dark:text-violet-300" : "text-gray-700 dark:text-gray-200"}`}>Dark</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Easy on the eyes</p>
-                  </div>
-                </button>
+            <CardContent className="p-12 text-center">
+              <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                <Sun className="h-6 w-6 text-gray-500" />
               </div>
+              <p className="text-sm font-medium text-gray-300 mb-1">No preferences yet</p>
+              <p className="text-xs text-gray-500 max-w-xs mx-auto">
+                Additional preferences will appear here as we add them.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
