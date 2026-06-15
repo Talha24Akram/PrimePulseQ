@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { blockCrossSite } from "@/lib/csrf";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Setup failed" }, { status: 500 });
     }
   } catch (err) {
+    Sentry.captureException(err);
     console.error("setup/owner error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

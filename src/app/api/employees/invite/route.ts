@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { Resend } from "resend";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
+    Sentry.captureException(err);
     console.error("employee invite error:", err);
     return NextResponse.json({ ok: false, error: "Failed to send invite email" }, { status: 500 });
   }

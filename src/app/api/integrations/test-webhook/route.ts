@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { blockCrossSite } from "@/lib/csrf";
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
+    Sentry.captureException(err);
     return NextResponse.json({ error: "Failed to reach webhook URL" }, { status: 400 });
   }
 }

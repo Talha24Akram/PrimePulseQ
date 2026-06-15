@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { Resend } from "resend";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
@@ -151,6 +152,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sent, failed, total: employees.length });
   } catch (err) {
+    Sentry.captureException(err);
     console.error("send-survey error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

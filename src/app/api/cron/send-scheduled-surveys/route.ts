@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 import { notifyWebhooks } from "@/lib/webhooks";
@@ -162,6 +163,7 @@ export async function GET(request: NextRequest) {
     const { data } = await supabase.rpc("purge_expired_tokens");
     purged = typeof data === "number" ? data : Number(data ?? 0);
   } catch (err) {
+    Sentry.captureException(err);
     console.error("purge_expired_tokens failed:", err);
   }
 
@@ -171,6 +173,7 @@ export async function GET(request: NextRequest) {
     const { data } = await supabase.rpc("purge_old_responses");
     responsesPurged = typeof data === "number" ? data : Number(data ?? 0);
   } catch (err) {
+    Sentry.captureException(err);
     console.error("purge_old_responses failed:", err);
   }
 

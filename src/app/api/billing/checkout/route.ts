@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { paddle, getPriceIdFromTier } from "@/lib/paddle";
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: checkoutUrl });
   } catch (err) {
+    Sentry.captureException(err);
     console.error("Paddle checkout error:", err);
     return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 });
   }

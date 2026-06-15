@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@supabase/supabase-js";
 import { EventName } from "@paddle/paddle-node-sdk";
 import { paddle, getTierFromPriceId } from "@/lib/paddle";
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
       signature
     );
   } catch (err) {
+    Sentry.captureException(err);
     console.error("Paddle webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
@@ -122,6 +124,7 @@ export async function POST(request: NextRequest) {
         break;
     }
   } catch (err) {
+    Sentry.captureException(err);
     console.error("Paddle webhook handler error:", err);
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });
   }

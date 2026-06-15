@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { paddle } from "@/lib/paddle";
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: portalUrl });
   } catch (err) {
+    Sentry.captureException(err);
     console.error("Paddle portal error:", err);
     return NextResponse.json({ error: "Failed to open billing portal" }, { status: 500 });
   }
