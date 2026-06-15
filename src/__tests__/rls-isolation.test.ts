@@ -27,6 +27,7 @@ async function seedOrg() {
   )).rows[0];
   await db.query(`insert into employees (workspace_id, email) values ($1, $2)`, [user.id, `e${Math.random()}@x.com`]);
   await db.query(`insert into responses (survey_id, answers) values ($1, '{"q":5}'::jsonb)`, [survey.id]);
+  await db.query(`insert into actions (workspace_id, title, status) values ($1, 'Do a thing', 'planned')`, [user.id]);
   return { userId: user.id, surveyId: survey.id };
 }
 
@@ -61,6 +62,7 @@ beforeAll(async () => {
   await db.exec(mig("20260101000001_rate_limiting.sql"));
   await db.exec(mig("20260615000000_atomic_submit_response.sql"));
   await db.exec(mig("20260615000001_sliding_window_rate_limit.sql"));
+  await db.exec(mig("20260615000004_actions.sql"));
 
   // A real Supabase-style non-superuser role that RLS actually applies to.
   await db.exec(`
@@ -113,6 +115,31 @@ describe("RLS cross-tenant isolation", () => {
     await asUser(orgA.userId, `delete from employees where workspace_id = '${orgB.userId}'`);
     const after = (await db.query<{ c: number }>(`select count(*)::int c from employees where workspace_id = $1`, [orgB.userId])).rows[0].c;
     expect(after).toBe(before);
+  });
+
+  it("a tenant sees only their own actions", async () => {
+    const aRows = await asUser(orgA.userId, `select id from actions`);
+    const bRows = await asUser(orgB.userId, `select id from actions`);
+    expect(aRows).toHaveLength(1);
+    expect(bRows).toHaveLength(1);
+    expect(aRows).not.toEqual(bRows);
+  });
+
+  it("a tenant cannot insert an action for another tenant (RLS WITH CHECK)", async () => {
+    // Attempt to insert a row owned by org B while acting as org A — RLS rejects it.
+    await db.exec(`set role authenticated; set "test.uid" = '${orgA.userId}';`);
+    let failed = false;
+    try {
+      await db.query(`insert into actions (workspace_id, title) values ('${orgB.userId}', 'evil')`);
+    } catch {
+      failed = true;
+    } finally {
+      await db.exec(`set "test.uid" = ''; reset role;`);
+    }
+    expect(failed).toBe(true);
+    // Confirm B has no injected row.
+    const count = (await db.query<{ c: number }>(`select count(*)::int c from actions where workspace_id = $1`, [orgB.userId])).rows[0].c;
+    expect(count).toBe(1);
   });
 
   it("an anonymous user (no auth.uid) sees no surveys or responses", async () => {

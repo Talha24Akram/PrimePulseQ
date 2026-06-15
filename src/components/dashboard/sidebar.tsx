@@ -6,6 +6,7 @@ import {
   FileText,
   Users,
   BarChart3,
+  CheckSquare,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/surveys", icon: FileText, label: "Surveys" },
   { href: "/employees", icon: Users, label: "Employees" },
   { href: "/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/actions", icon: CheckSquare, label: "Actions" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 

@@ -7,7 +7,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Download, BarChart3, Sparkles, Lightbulb, ArrowRight } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Download, BarChart3, Sparkles, Lightbulb, ArrowRight, Plus, CheckSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,32 @@ export default function AnalyticsPage() {
   const [allQuestions, setAllQuestions] = useState<QuestionRow[]>([]);
   const [aiInsight, setAiInsight] = useState<AIInsight | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [addedRecs, setAddedRecs] = useState<Set<number>>(new Set());
+  const [actionsTaken, setActionsTaken] = useState(0);
+
+  useEffect(() => {
+    if (!profile) return;
+    const supabase = createClient();
+    supabase
+      .from("actions")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", profile.id)
+      .eq("status", "done")
+      .then(({ count }) => setActionsTaken(count ?? 0));
+  }, [profile, addedRecs]);
+
+  async function addRecToActions(index: number, rec: string) {
+    if (!profile) return;
+    const supabase = createClient();
+    const [title, ...rest] = rec.split(":");
+    const { error } = await supabase.from("actions").insert({
+      workspace_id: profile.id,
+      title: (rest.length ? title : rec).trim().slice(0, 200),
+      description: rest.length ? rest.join(":").trim() : null,
+      status: "planned",
+    });
+    if (!error) setAddedRecs((prev) => new Set(prev).add(index));
+  }
 
   useEffect(() => {
     if (!profile) return;
@@ -270,7 +296,15 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+            {actionsTaken > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20">
+                <CheckSquare className="h-3 w-3" />
+                {actionsTaken} action{actionsTaken !== 1 ? "s" : ""} taken
+              </span>
+            )}
+          </div>
           <p className="text-gray-500 text-sm mt-1">Team engagement intelligence</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -744,7 +778,14 @@ export default function AnalyticsPage() {
                       {aiInsight.recommendations.map((rec, i) => (
                         <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/8">
                           <div className="h-5 w-5 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-200">{rec}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-200 flex-1">{rec}</p>
+                          <button
+                            onClick={() => addRecToActions(i, rec)}
+                            disabled={addedRecs.has(i)}
+                            className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md transition-colors disabled:opacity-60 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10"
+                          >
+                            {addedRecs.has(i) ? <><CheckCircle2 className="h-3 w-3" />Added</> : <><Plus className="h-3 w-3" />Add to Actions</>}
+                          </button>
                         </div>
                       ))}
                     </div>
