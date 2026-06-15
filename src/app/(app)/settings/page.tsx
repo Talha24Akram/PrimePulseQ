@@ -32,6 +32,9 @@ function SettingsInner() {
   const [alertPct, setAlertPct] = useState<number>(50);
   const [minCohort, setMinCohort] = useState<number>(5);
   const [digestEnabled, setDigestEnabled] = useState<boolean>(true);
+  const [sendDay, setSendDay] = useState<number>(1);
+  const [sendHour, setSendHour] = useState<number>(8);
+  const [timezone, setTimezone] = useState<string>("UTC");
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsSaved, setPrefsSaved] = useState(false);
   const NOTIF_KEY = "ppq_notification_prefs";
@@ -79,6 +82,9 @@ function SettingsInner() {
       setAlertPct(profile.response_rate_alert_pct ?? 50);
       setMinCohort(profile.min_cohort_display ?? 5);
       setDigestEnabled(profile.digest_emails_enabled ?? true);
+      setSendDay(profile.send_day_of_week ?? 1);
+      setSendHour(profile.send_hour ?? 8);
+      setTimezone(profile.timezone ?? "UTC");
     }
   }, [profile]);
 
@@ -90,6 +96,9 @@ function SettingsInner() {
       response_rate_alert_pct: Math.min(100, Math.max(0, alertPct)),
       min_cohort_display: Math.min(20, Math.max(3, minCohort)),
       digest_emails_enabled: digestEnabled,
+      send_day_of_week: sendDay,
+      send_hour: sendHour,
+      timezone: timezone || "UTC",
     });
     setPrefsSaving(false);
     setPrefsSaved(true);
@@ -338,6 +347,41 @@ function SettingsInner() {
                   />
                   <p className="text-xs text-gray-400">Anonymity floor before results/open-text appear (3–20).</p>
                 </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label>Recurring survey send time</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg">
+                  <Select value={String(sendDay)} onValueChange={(v) => setSendDay(Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"].map((d, i) => (
+                        <SelectItem key={d} value={String(i)}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={String(sendHour)} onValueChange={(v) => setSendHour(Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 24 }, (_, h) => (
+                        <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={timezone} onValueChange={setTimezone}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["UTC","America/New_York","America/Chicago","America/Denver","America/Los_Angeles","Europe/London","Europe/Berlin","Europe/Madrid","Asia/Dubai","Asia/Karachi","Asia/Kolkata","Asia/Singapore","Asia/Tokyo","Australia/Sydney"].map((tz) => (
+                        <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Weekly/biweekly/monthly surveys go out on this day and hour in your timezone. Defaults to Monday 08:00 UTC.
+                </p>
               </div>
 
               <Separator />

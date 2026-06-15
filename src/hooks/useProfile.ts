@@ -25,6 +25,9 @@ export interface Profile {
   response_rate_alert_pct: number | null;
   min_cohort_display: number | null;
   digest_emails_enabled: boolean | null;
+  send_day_of_week: number | null;
+  send_hour: number | null;
+  timezone: string | null;
   created_at: string;
 }
 

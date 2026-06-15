@@ -6,6 +6,7 @@ import { escapeHtml } from "@/lib/utils";
 import { resolveFromEmail } from "@/lib/email";
 import { getStrings, normalizeLocale, isRtl } from "@/lib/locales";
 import { clampExpiryDays, expiryFromNow, DEFAULT_SURVEY_EXPIRY_DAYS } from "@/lib/preferences";
+import { shouldSendNow, resolveSendPrefs } from "@/lib/cron-schedule";
 
 // This route is called by Vercel Cron daily.
 // It finds all active surveys whose frequency matches today's schedule
@@ -34,48 +35,35 @@ export async function GET(request: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://primepulseq.vercel.app";
   const fromEmail = resolveFromEmail();
 
-  const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon ... 6=Sat
-  const dayOfMonth = today.getDate();
+  const now = new Date();
 
-  // Determine which frequencies should fire today
-  // weekly: every Monday (1)
-  // biweekly: every other Monday — use ISO week number parity
-  // monthly: 1st of the month
-  const weekNumber = Math.ceil(dayOfMonth / 7);
-  const isMonday = dayOfWeek === 1;
-  const isFirstOfMonth = dayOfMonth === 1;
-  const isEvenWeek = weekNumber % 2 === 0;
-
-  const activeFrequencies: string[] = [];
-  if (isMonday) activeFrequencies.push("weekly");
-  if (isMonday && isEvenWeek) activeFrequencies.push("biweekly");
-  if (isFirstOfMonth) activeFrequencies.push("monthly");
-
-  if (activeFrequencies.length === 0) {
-    return NextResponse.json({ message: "No surveys scheduled for today", sent: 0 });
-  }
-
-  // Fetch all active surveys matching today's frequencies
+  // Cron runs hourly. Fetch all active recurring surveys; gate each on its
+  // workspace's per-tenant send day/hour/timezone below.
   const { data: surveys } = await supabase
     .from("surveys")
     .select("id, title, description, workspace_id, frequency")
     .eq("status", "active")
-    .in("frequency", activeFrequencies);
+    .in("frequency", ["weekly", "biweekly", "monthly"]);
 
   if (!surveys?.length) {
-    return NextResponse.json({ message: "No matching active surveys", sent: 0 });
+    return NextResponse.json({ message: "No active recurring surveys", sent: 0 });
   }
 
   let totalSent = 0;
 
   for (const survey of surveys) {
-    // Fetch workspace profile (including webhook URLs)
+    // Fetch workspace profile (webhook URLs + send-schedule prefs)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, company_name, slack_webhook_url, teams_webhook_url, survey_expiry_days")
+      .select("full_name, company_name, slack_webhook_url, teams_webhook_url, survey_expiry_days, send_day_of_week, send_hour, timezone")
       .eq("id", survey.workspace_id)
       .single();
+
+    // Per-tenant timing gate: only send at the workspace's configured local
+    // day + hour for this frequency.
+    if (!shouldSendNow(survey.frequency, resolveSendPrefs(profile ?? {}), now)) {
+      continue;
+    }
 
     // Fetch active employees — exclude those who have opted out of emails
     const { data: employees } = await supabase
