@@ -52,6 +52,7 @@ beforeAll(async () => {
   await db.exec(migration("20260616000008_email_status.sql"));
   await db.exec(migration("20260616000009_rate_limit_cleanup.sql"));
   await db.exec(migration("20260616000010_plan_limits.sql"));
+  await db.exec(migration("20260616000011_audit_helpers.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
@@ -354,6 +355,22 @@ describe("purge_old_responses (data retention)", () => {
     try { await db.query(`update profiles set data_retention_days = 45 where id = $1`, [u]); }
     catch { failed = true; }
     expect(failed).toBe(true);
+  });
+});
+
+describe("write_audit_log", () => {
+  it("appends an audit_logs row via the SECURITY DEFINER function", async () => {
+    const u = await newUser();
+    await db.query(
+      `select write_audit_log($1, $2, 'plan.upgraded', 'profile', $3, '{"tier":"growth"}'::jsonb)`,
+      [u, u, u]
+    );
+    const row = (await db.query<{ action: string; actor_id: string; workspace_id: string }>(
+      `select action, actor_id, workspace_id from audit_logs where workspace_id = $1 order by created_at desc limit 1`,
+      [u]
+    )).rows[0];
+    expect(row.action).toBe("plan.upgraded");
+    expect(row.actor_id).toBe(u);
   });
 });
 

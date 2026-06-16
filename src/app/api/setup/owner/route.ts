@@ -69,6 +69,10 @@ export async function POST(request: NextRequest) {
 
     switch (result) {
       case "ok":
+        await admin.rpc("write_audit_log", {
+          p_org_id: user.id, p_actor_id: user.id, p_action: "owner.claimed",
+          p_resource_type: "profile", p_resource_id: user.id, p_meta: {},
+        });
         return NextResponse.json({ ok: true, owner: true });
       case "already_owner":
         return NextResponse.json({ ok: true, owner: true, alreadyOwner: true });

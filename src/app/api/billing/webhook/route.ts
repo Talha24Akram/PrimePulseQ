@@ -51,6 +51,10 @@ export async function POST(request: NextRequest) {
               paddle_customer_id: customerId,
             })
             .eq("id", userId);
+          await supabase.rpc("write_audit_log", {
+            p_org_id: userId, p_actor_id: null, p_action: "plan.upgraded",
+            p_resource_type: "profile", p_resource_id: userId, p_meta: { tier, via: "paddle" },
+          });
         }
         break;
       }
@@ -98,10 +102,18 @@ export async function POST(request: NextRequest) {
         const sub = event.data;
         const customerId = sub.customerId;
 
-        await supabase
+        const { data: canceled } = await supabase
           .from("profiles")
           .update({ subscription_tier: "free", subscription_status: "canceled" })
-          .eq("paddle_customer_id", customerId);
+          .eq("paddle_customer_id", customerId)
+          .select("id")
+          .maybeSingle();
+        if (canceled?.id) {
+          await supabase.rpc("write_audit_log", {
+            p_org_id: canceled.id, p_actor_id: null, p_action: "plan.downgraded",
+            p_resource_type: "profile", p_resource_id: canceled.id, p_meta: { tier: "free", reason: "subscription_canceled" },
+          });
+        }
         break;
       }
 

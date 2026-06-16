@@ -408,6 +408,7 @@ function SettingsInner() {
             </CardContent>
           </Card>
 
+          <AuditLogCard />
           {isOwner && <CronHistoryCard />}
         </TabsContent>
 
@@ -685,6 +686,71 @@ function CronHistoryCard() {
                     </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface AuditEntry {
+  id: string;
+  action: string;
+  resource_type: string | null;
+  actor_email: string | null;
+  created_at: string;
+}
+
+function AuditLogCard() {
+  const [logs, setLogs] = useState<AuditEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("audit_logs")
+      .select("id, action, resource_type, actor_email, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .then(({ data }) => {
+        setLogs((data ?? []) as AuditEntry[]);
+        setLoading(false);
+      });
+  }, []);
+
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="text-base">Audit log</CardTitle>
+        <CardDescription>The last 100 actions in your workspace.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p className="text-sm text-gray-400">Loading…</p>
+        ) : logs.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">No activity recorded yet.</p>
+        ) : (
+          <div className="max-h-80 overflow-y-auto border border-gray-100 dark:border-white/8 rounded-lg">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-gray-50 dark:bg-white/5">
+                <tr className="text-left text-xs text-gray-400">
+                  <th className="py-2 px-3 font-medium">When</th>
+                  <th className="py-2 px-3 font-medium">Action</th>
+                  <th className="py-2 px-3 font-medium">Resource</th>
+                  <th className="py-2 px-3 font-medium">Actor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((l) => (
+                  <tr key={l.id} className="border-t border-gray-50 dark:border-white/5">
+                    <td className="py-2 px-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(l.created_at)}</td>
+                    <td className="py-2 px-3"><span className="font-mono text-xs bg-gray-100 dark:bg-white/8 px-1.5 py-0.5 rounded text-violet-700 dark:text-violet-300">{l.action}</span></td>
+                    <td className="py-2 px-3 text-gray-600 dark:text-gray-400 text-xs">{l.resource_type ?? "—"}</td>
+                    <td className="py-2 px-3 text-gray-600 dark:text-gray-400 text-xs truncate max-w-[160px]">{l.actor_email ?? "system"}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
