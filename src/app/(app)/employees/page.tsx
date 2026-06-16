@@ -127,7 +127,8 @@ export default function EmployeesPage() {
   async function handleDelete(id: string) {
     if (!confirm("Remove this employee from your workspace?")) return;
     const supabase = createClient();
-    await supabase.from("employees").delete().eq("id", id);
+    // Soft delete: also mark inactive so it frees a plan slot and is hidden by RLS.
+    await supabase.from("employees").update({ deleted_at: new Date().toISOString(), is_active: false }).eq("id", id);
     await logAudit("employee.deleted", { resourceType: "employee", resourceId: id });
     setEmployees((prev) => prev.filter((e) => e.id !== id));
   }

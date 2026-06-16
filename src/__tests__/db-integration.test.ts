@@ -54,6 +54,7 @@ beforeAll(async () => {
   await db.exec(migration("20260616000010_plan_limits.sql"));
   await db.exec(migration("20260616000011_audit_helpers.sql"));
   await db.exec(migration("20260616000012_survey_closed_at.sql"));
+  await db.exec(migration("20260616000013_soft_deletes.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
@@ -468,5 +469,41 @@ describe("purge_expired_tokens", () => {
 
     const remaining = (await db.query<{ c: number }>(`select count(*)::int c from survey_tokens where survey_id = $1`, [surveyId])).rows[0].c;
     expect(remaining).toBe(1); // only the live token survives
+  });
+});
+
+// ── soft deletes ─────────────────────────────────────────────
+describe("soft deletes", () => {
+  it("purge_deleted_surveys removes rows soft-deleted >30 days ago but keeps recent ones", async () => {
+    const old = await seedSurvey();
+    const recent = await seedSurvey();
+    // old: deleted 40 days ago → eligible for purge
+    await db.query(`update surveys set deleted_at = now() - interval '40 days' where id = $1`, [old.surveyId]);
+    // recent: deleted 2 days ago → still restorable, must survive
+    await db.query(`update surveys set deleted_at = now() - interval '2 days' where id = $1`, [recent.surveyId]);
+
+    await db.query(`select purge_deleted_surveys()`);
+
+    const oldGone = (await db.query<{ c: number }>(`select count(*)::int c from surveys where id = $1`, [old.surveyId])).rows[0].c;
+    const recentKept = (await db.query<{ c: number }>(`select count(*)::int c from surveys where id = $1`, [recent.surveyId])).rows[0].c;
+    expect(oldGone).toBe(0);
+    expect(recentKept).toBe(1);
+  });
+
+  it("the survey-limit trigger does not count soft-deleted surveys", async () => {
+    // A free-tier workspace (limit 1 active survey).
+    const user = (await db.query<{ id: string }>(`insert into auth.users (email) values ($1) returning id`, [`u${Math.random()}@x.com`])).rows[0];
+    // First active survey — allowed.
+    const first = (await db.query<{ id: string }>(`insert into surveys (workspace_id, title, status) values ($1,'A','active') returning id`, [user.id])).rows[0].id;
+    // Soft-delete it, freeing the slot.
+    await db.query(`update surveys set deleted_at = now() where id = $1`, [first]);
+    // A new active survey must now be allowed (the deleted one doesn't count).
+    let ok = true;
+    try {
+      await db.query(`insert into surveys (workspace_id, title, status) values ($1,'B','active')`, [user.id]);
+    } catch {
+      ok = false;
+    }
+    expect(ok).toBe(true);
   });
 });

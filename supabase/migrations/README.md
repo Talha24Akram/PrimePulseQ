@@ -53,6 +53,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260616000010_plan_limits.sql` | DB triggers enforcing per-tier employee/active-survey limits |
 | `20260616000011_audit_helpers.sql` | `audit_logs.actor_id` + `write_audit_log()` for server-side audit entries |
 | `20260616000012_survey_closed_at.sql` | `surveys.closed_at` (auto-close + notify) |
+| `20260616000013_soft_deletes.sql` | `deleted_at` on surveys/employees/questions; per-command RLS hides soft-deleted rows; deleted-aware plan limits; `purge_deleted_surveys()` (30-day sweep) |
 
 ## One-time setup after first deploy
 

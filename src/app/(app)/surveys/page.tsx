@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
 import { useProfile } from "@/hooks/useProfile";
 import { canAccess, getTemplateLimit, TIER_LABELS } from "@/lib/tiers";
 
@@ -72,9 +73,11 @@ export default function SurveysPage() {
   useEffect(() => { loadSurveys(); }, [loadSurveys]);
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this survey? This cannot be undone.")) return;
+    if (!confirm("Delete this survey? You can restore it within 30 days.")) return;
     const supabase = createClient();
-    await supabase.from("surveys").delete().eq("id", id);
+    // Soft delete — recoverable for 30 days, then purged by the cron.
+    await supabase.from("surveys").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    await logAudit("survey.deleted", { resourceType: "survey", resourceId: id });
     setSurveys((prev) => prev.filter((s) => s.id !== id));
   }
 

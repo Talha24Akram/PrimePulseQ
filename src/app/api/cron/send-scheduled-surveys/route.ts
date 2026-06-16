@@ -69,7 +69,8 @@ export async function GET(request: NextRequest) {
     .from("surveys")
     .select("id, title, description, workspace_id, frequency")
     .eq("status", "active")
-    .in("frequency", ["weekly", "biweekly", "monthly"]);
+    .in("frequency", ["weekly", "biweekly", "monthly"])
+    .is("deleted_at", null);
 
   for (const survey of surveys ?? []) {
     // Fetch workspace profile (webhook URLs + send-schedule prefs)
@@ -91,7 +92,8 @@ export async function GET(request: NextRequest) {
       .select("id, name, email, locale")
       .eq("workspace_id", survey.workspace_id)
       .eq("is_active", true)
-      .eq("email_opted_out", false);
+      .eq("email_opted_out", false)
+      .is("deleted_at", null);
 
     if (!employees?.length) continue;
 
@@ -250,7 +252,8 @@ export async function GET(request: NextRequest) {
     .from("surveys")
     .select("id, title, workspace_id")
     .eq("status", "active")
-    .eq("frequency", "one-time");
+    .eq("frequency", "one-time")
+    .is("deleted_at", null);
 
   for (const sv of oneTimeActive ?? []) {
     const { count: totalTokens } = await supabase
@@ -321,6 +324,15 @@ ${lowFlag ? `<p style="margin:0 0 16px;font-size:14px;color:#b45309;background:#
     Sentry.captureException(err);
     console.error("purge_old_responses failed:", err);
     errors.push({ stage: "purge_old_responses", message: String(err) });
+  }
+
+  // Permanently remove surveys soft-deleted more than 30 days ago.
+  try {
+    await supabase.rpc("purge_deleted_surveys");
+  } catch (err) {
+    Sentry.captureException(err);
+    console.error("purge_deleted_surveys failed:", err);
+    errors.push({ stage: "purge_deleted_surveys", message: String(err) });
   }
   } catch (err) {
     Sentry.captureException(err);

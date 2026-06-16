@@ -65,6 +65,8 @@ beforeAll(async () => {
   await db.exec(mig("20260615000004_actions.sql"));
   await db.exec(mig("20260615000005_question_library_and_templates.sql"));
   await db.exec(mig("20260616000007_cron_runs.sql"));
+  await db.exec(mig("20260616000010_plan_limits.sql"));
+  await db.exec(mig("20260616000013_soft_deletes.sql"));
 
   // A real Supabase-style non-superuser role that RLS actually applies to.
   await db.exec(`
@@ -185,6 +187,26 @@ describe("RLS cross-tenant isolation", () => {
     const owner = await asUser(orgA.userId, `select id from cron_runs`);
     expect(owner.length).toBeGreaterThanOrEqual(1);
     await db.query(`update profiles set is_owner = false where id = $1`, [orgA.userId]);
+  });
+
+  it("hides soft-deleted surveys from SELECT for every tenant, and shows them again on restore", async () => {
+    // The RLS guarantee under test is the SELECT filter (deleted_at is null). The
+    // soft-delete/restore writes are issued as superuser: the app performs them via
+    // supabase-js `.update()` (return=minimal, no RETURNING), but PGlite applies the
+    // SELECT policy to UPDATE rows, so a hidden row can't be re-read under RLS here.
+    await db.query(`update surveys set deleted_at = now() where workspace_id = $1`, [orgA.userId]);
+
+    // Owning tenant no longer sees it…
+    const hidden = await asUser(orgA.userId, `select id from surveys`);
+    expect(hidden).toHaveLength(0);
+    // …and neither does anyone else.
+    const bView = await asUser(orgB.userId, `select id from surveys where id = '${orgA.surveyId}'`);
+    expect(bView).toHaveLength(0);
+
+    // Restoring (deleted_at back to null) makes it visible to its tenant again.
+    await db.query(`update surveys set deleted_at = null where id = $1`, [orgA.surveyId]);
+    const restored = await asUser<{ id: string }>(orgA.userId, `select id from surveys`);
+    expect(restored.map((r) => r.id)).toContain(orgA.surveyId);
   });
 
   it("an anonymous user (no auth.uid) sees no surveys or responses", async () => {
