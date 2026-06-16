@@ -22,7 +22,10 @@ action plan.
 - Slack & Teams webhook notifications
 - Email delivery + unsubscribe handling (CAN-SPAM / GDPR friendly)
 - Public [`/trust`](src/app/trust/page.tsx) page explaining anonymity to employees
+- **Per-workspace preferences** — survey link expiry, data retention, results
+  cohort threshold, response-rate alerts, and per-tenant send day/hour/timezone
 - 4-tier plans: Free / Starter / Growth / Enterprise (Paddle billing)
+- Error tracking via Sentry; cron run observability (owner-only history)
 - Polished dark-mode UI
 
 ## Tech Stack
@@ -34,6 +37,7 @@ action plan.
 | Charts | Recharts |
 | Auth + Database | Supabase (PostgreSQL + Row Level Security) |
 | AI | Anthropic (`@anthropic-ai/sdk`, `claude-sonnet-4-6`) |
+| Error tracking | Sentry (`@sentry/nextjs`) — no-op without a DSN |
 | Email | Resend |
 | Billing | Paddle |
 | Tests | Vitest + PGlite (in-process Postgres) |
