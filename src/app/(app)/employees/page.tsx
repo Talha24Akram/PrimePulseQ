@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Upload, Mail, Trash2, UserCheck, AlertTriangle } from "lucide-react";
+import { Plus, Search, Upload, Mail, Trash2, UserCheck, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,13 @@ interface Employee {
   created_at: string;
 }
 
+interface RowResult { row: number; email: string; status: "imported" | "skipped" | "error"; reason?: string }
+interface ImportResults {
+  error?: string;
+  summary?: { imported: number; skipped: number; errored: number };
+  results?: RowResult[];
+}
+
 const departments = ["All", "Engineering", "Design", "Marketing", "Sales", "HR", "Product", "Operations", "Finance"];
 
 export default function EmployeesPage() {
@@ -35,6 +42,8 @@ export default function EmployeesPage() {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
   const [newEmployee, setNewEmployee] = useState({ name: "", email: "", department: "", role: "", locale: "en" });
+  const [importing, setImporting] = useState(false);
+  const [importResults, setImportResults] = useState<ImportResults | null>(null);
 
   const tier = profile?.subscription_tier ?? "free";
   const isOwner = profile?.is_owner ?? false;
@@ -133,38 +142,33 @@ export default function EmployeesPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     const text = await file.text();
-    const lines = text.split("\n").filter(Boolean);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const lines = text.split("\n").filter((l) => l.trim());
 
-    const validLocales = ["en", "ar", "fr", "de", "es", "pt"];
-    let rows = lines.slice(1).map((line) => {
+    const rows = lines.slice(1).map((line) => {
       const [name, email, department, role, locale] = line.split(",").map((s) => s.trim().replace(/^"|"$/g, ""));
-      return {
-        workspace_id: user.id,
-        email,
-        name: name || null,
-        department: department || null,
-        role: role || null,
-        locale: validLocales.includes((locale || "").toLowerCase()) ? locale.toLowerCase() : "en",
-      };
-    }).filter((r) => r.email && r.email.includes("@"));
+      return { name, email, department, role, locale };
+    });
 
-    // Enforce the plan's employee limit on imports too
-    if (!isOwner && limit !== Infinity) {
-      const remaining = Math.max(0, limit - activeCount);
-      if (rows.length > remaining) {
-        alert(`Your ${TIER_LABELS[tier]} plan allows ${limit} active employees. Importing the first ${remaining} of ${rows.length} rows.`);
-        rows = rows.slice(0, remaining);
-      }
-      if (rows.length === 0) { e.target.value = ""; return; }
-    }
-
-    await supabase.from("employees").upsert(rows, { onConflict: "workspace_id,email" });
-    await logAudit("employee.imported", { metadata: { count: rows.length } });
-    await loadEmployees();
+    setImporting(true);
+    setImportResults(null);
+    const res = await fetch("/api/employees/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rows }),
+    });
+    setImporting(false);
     e.target.value = "";
+
+    if (!res.ok) {
+      setImportResults({ error: "Import failed. Please check the file and try again." });
+      return;
+    }
+    const data = await res.json();
+    setImportResults(data);
+    if (data.summary?.imported > 0) {
+      await logAudit("employee.imported", { metadata: { count: data.summary.imported } });
+      await loadEmployees();
+    }
   }
 
   if (loading) {
@@ -210,6 +214,60 @@ export default function EmployeesPage() {
           You&apos;ve reached the {limit}-employee limit on the {TIER_LABELS[tier]} plan.{" "}
           <a href="/settings?tab=billing" className="underline font-medium">Upgrade to add more.</a>
         </div>
+      )}
+
+      {importing && (
+        <div className="mb-6 p-4 rounded-xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 text-violet-700 dark:text-violet-300 text-sm">
+          Importing employees…
+        </div>
+      )}
+
+      {importResults && (
+        <Card className="mb-6">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Import results</p>
+              <button onClick={() => setImportResults(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X className="h-4 w-4" /></button>
+            </div>
+            {importResults.error ? (
+              <p className="text-sm text-red-600 dark:text-red-400">{importResults.error}</p>
+            ) : (
+              <>
+                <div className="flex gap-4 text-sm mb-4 flex-wrap">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">{importResults.summary?.imported ?? 0} imported</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">{importResults.summary?.skipped ?? 0} skipped</span>
+                  <span className="text-red-600 dark:text-red-400 font-medium">{importResults.summary?.errored ?? 0} errors</span>
+                </div>
+                {(importResults.results ?? []).some((r) => r.status !== "imported") && (
+                  <div className="max-h-56 overflow-y-auto border border-gray-100 dark:border-white/8 rounded-lg">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-gray-50 dark:bg-white/5">
+                        <tr className="text-left text-gray-400">
+                          <th className="py-1.5 px-3 font-medium">Row</th>
+                          <th className="py-1.5 px-3 font-medium">Email</th>
+                          <th className="py-1.5 px-3 font-medium">Status</th>
+                          <th className="py-1.5 px-3 font-medium">Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(importResults.results ?? []).filter((r) => r.status !== "imported").map((r) => (
+                          <tr key={r.row} className="border-t border-gray-50 dark:border-white/5">
+                            <td className="py-1.5 px-3 text-gray-500">{r.row}</td>
+                            <td className="py-1.5 px-3 text-gray-700 dark:text-gray-300 truncate max-w-[160px]">{r.email || "—"}</td>
+                            <td className="py-1.5 px-3">
+                              <Badge variant={r.status === "skipped" ? "secondary" : "destructive"} className="text-[10px]">{r.status}</Badge>
+                            </td>
+                            <td className="py-1.5 px-3 text-gray-500">{r.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Stats */}
