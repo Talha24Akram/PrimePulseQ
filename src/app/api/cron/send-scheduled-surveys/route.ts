@@ -244,6 +244,65 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // ── Close completed one-time surveys + notify the owner ──────
+  // A one-time survey is "done" once all its tokens are used or expired.
+  const { data: oneTimeActive } = await supabase
+    .from("surveys")
+    .select("id, title, workspace_id")
+    .eq("status", "active")
+    .eq("frequency", "one-time");
+
+  for (const sv of oneTimeActive ?? []) {
+    const { count: totalTokens } = await supabase
+      .from("survey_tokens").select("token", { count: "exact", head: true }).eq("survey_id", sv.id);
+    if (!totalTokens) continue; // never sent
+    const { count: liveTokens } = await supabase
+      .from("survey_tokens").select("token", { count: "exact", head: true })
+      .eq("survey_id", sv.id).eq("used", false).gt("expires_at", now.toISOString());
+    if ((liveTokens ?? 0) > 0) continue; // still collecting
+
+    await supabase.from("surveys").update({ status: "closed", closed_at: now.toISOString() }).eq("id", sv.id);
+
+    const { count: respCount } = await supabase
+      .from("responses").select("id", { count: "exact", head: true }).eq("survey_id", sv.id);
+    const responseRate = totalTokens ? Math.round(((respCount ?? 0) / totalTokens) * 100) : 0;
+
+    const { data: prof } = await supabase
+      .from("profiles").select("email, company_name, full_name, response_rate_alert_pct")
+      .eq("id", sv.workspace_id).single();
+    const alertPct = (prof as { response_rate_alert_pct?: number } | null)?.response_rate_alert_pct ?? 50;
+    const lowFlag = responseRate < alertPct;
+
+    await supabase.rpc("write_audit_log", {
+      p_org_id: sv.workspace_id, p_actor_id: null, p_action: "survey.closed",
+      p_resource_type: "survey", p_resource_id: sv.id, p_meta: { responseRate, responses: respCount ?? 0, invited: totalTokens },
+    });
+
+    if (prof?.email) {
+      const title = escapeHtml(sv.title);
+      const analytics = `${appUrl}/surveys/${sv.id}`;
+      try {
+        await resend.emails.send({
+          from: `PrimePulseQ <${fromEmail}>`,
+          to: prof.email,
+          subject: `Survey closed: ${sv.title}`,
+          html: `<!DOCTYPE html><html><body style="font-family:-apple-system,Segoe UI,sans-serif;background:#f9fafb;padding:32px 16px;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+<table style="max-width:480px;background:#fff;border-radius:16px;border:1px solid #e5e7eb;padding:32px;">
+<tr><td>
+<h1 style="margin:0 0 12px;font-size:20px;color:#111827;">${title} has closed</h1>
+<p style="margin:0 0 16px;font-size:15px;color:#374151;">Response rate: <strong>${responseRate}%</strong> (${respCount ?? 0} of ${totalTokens} invited).</p>
+${lowFlag ? `<p style="margin:0 0 16px;font-size:14px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;">⚠️ Below your ${alertPct}% alert threshold.</p>` : ""}
+<a href="${analytics.replace(/"/g, "%22")}" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:600;padding:12px 28px;border-radius:10px;">View analytics →</a>
+</td></tr></table></td></tr></table></body></html>`,
+        });
+      } catch (err) {
+        Sentry.captureException(err);
+        errors.push({ stage: "close_notify", message: String(err) });
+      }
+    }
+  }
+
   // Housekeeping: purge used/expired survey tokens so the table stays small.
   try {
     const { data } = await supabase.rpc("purge_expired_tokens");

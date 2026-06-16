@@ -53,6 +53,7 @@ beforeAll(async () => {
   await db.exec(migration("20260616000009_rate_limit_cleanup.sql"));
   await db.exec(migration("20260616000010_plan_limits.sql"));
   await db.exec(migration("20260616000011_audit_helpers.sql"));
+  await db.exec(migration("20260616000012_survey_closed_at.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {

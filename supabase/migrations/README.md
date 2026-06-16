@@ -52,6 +52,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260616000009_rate_limit_cleanup.sql` | `rate_limit_events(created_at)` index + optional pg_cron sweep |
 | `20260616000010_plan_limits.sql` | DB triggers enforcing per-tier employee/active-survey limits |
 | `20260616000011_audit_helpers.sql` | `audit_logs.actor_id` + `write_audit_log()` for server-side audit entries |
+| `20260616000012_survey_closed_at.sql` | `surveys.closed_at` (auto-close + notify) |
 
 ## One-time setup after first deploy
 
