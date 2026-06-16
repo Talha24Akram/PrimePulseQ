@@ -3,10 +3,30 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { z } from "zod";
+import { unstable_cache } from "next/cache";
 import { rateLimitOk, getClientIp } from "@/lib/rate-limit";
 import { blockCrossSite, requireJson } from "@/lib/csrf";
 
 const BodySchema = z.object({ currentScore: z.number().min(0).max(100) });
+
+interface BenchmarkRow { p25: number | null; p50: number | null; p75: number | null; cohort_size: number }
+
+// Cohort-level percentile read, cached 1h keyed by (industry, band) only.
+function readCohortBenchmark(
+  admin: { rpc(fn: string, args: Record<string, unknown>): PromiseLike<{ data: unknown }> },
+  industry: string,
+  band: string
+): Promise<BenchmarkRow | null> {
+  return unstable_cache(
+    async () => {
+      const { data } = await admin.rpc("get_benchmark", { p_industry: industry, p_band: band });
+      const r = Array.isArray(data) ? data[0] : data;
+      return (r ?? null) as BenchmarkRow | null;
+    },
+    ["benchmark", industry, band],
+    { revalidate: 3600, tags: ["benchmark"] }
+  )();
+}
 
 function mondayOf(d: Date): string {
   const x = new Date(d);
@@ -77,11 +97,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Read cohort percentiles (gated at >= 3 distinct orgs inside the function).
-  const { data: bench } = await admin.rpc("get_benchmark", {
-    p_industry: profile.industry,
-    p_band: profile.headcount_band,
-  });
-  const row = Array.isArray(bench) ? bench[0] : bench;
+  // Cached per cohort (industry + size band) for 1h — percentiles only change
+  // weekly, and the key intentionally excludes the workspace id (cohort-level).
+  const row = await readCohortBenchmark(admin, profile.industry, profile.headcount_band);
 
   return NextResponse.json({
     configured: true,
