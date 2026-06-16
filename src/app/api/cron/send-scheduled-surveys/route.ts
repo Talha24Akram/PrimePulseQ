@@ -38,6 +38,23 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
 
+  // ── Observability: record this run, update it in finally ─────
+  const { data: runRow } = await supabase
+    .from("cron_runs")
+    .insert({ started_at: now.toISOString() })
+    .select("id")
+    .single();
+  const runId = runRow?.id as string | undefined;
+
+  let totalSent = 0;
+  let surveysSentCount = 0;
+  let emailsAttempted = 0;
+  let emailsFailed = 0;
+  let purged = 0;
+  let responsesPurged = 0;
+  const errors: { stage: string; message: string }[] = [];
+
+  try {
   // Cron runs hourly. Fetch all active recurring surveys; gate each on its
   // workspace's per-tenant send day/hour/timezone below.
   const { data: surveys } = await supabase
@@ -46,13 +63,7 @@ export async function GET(request: NextRequest) {
     .eq("status", "active")
     .in("frequency", ["weekly", "biweekly", "monthly"]);
 
-  if (!surveys?.length) {
-    return NextResponse.json({ message: "No active recurring surveys", sent: 0 });
-  }
-
-  let totalSent = 0;
-
-  for (const survey of surveys) {
+  for (const survey of surveys ?? []) {
     // Fetch workspace profile (webhook URLs + send-schedule prefs)
     const { data: profile } = await supabase
       .from("profiles")
@@ -132,7 +143,11 @@ export async function GET(request: NextRequest) {
     );
 
     const sent = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
     totalSent += sent;
+    emailsAttempted += results.length;
+    emailsFailed += failed;
+    if (sent > 0) surveysSentCount += 1;
 
     // Post to Slack / Teams — link to the admin survey view, not a personal token
     await notifyWebhooks(
@@ -158,26 +173,73 @@ export async function GET(request: NextRequest) {
   }
 
   // Housekeeping: purge used/expired survey tokens so the table stays small.
-  let purged = 0;
   try {
     const { data } = await supabase.rpc("purge_expired_tokens");
     purged = typeof data === "number" ? data : Number(data ?? 0);
   } catch (err) {
     Sentry.captureException(err);
     console.error("purge_expired_tokens failed:", err);
+    errors.push({ stage: "purge_expired_tokens", message: String(err) });
   }
 
   // Enforce per-workspace data retention (no-op for "keep forever" workspaces).
-  let responsesPurged = 0;
   try {
     const { data } = await supabase.rpc("purge_old_responses");
     responsesPurged = typeof data === "number" ? data : Number(data ?? 0);
   } catch (err) {
     Sentry.captureException(err);
     console.error("purge_old_responses failed:", err);
+    errors.push({ stage: "purge_old_responses", message: String(err) });
+  }
+  } catch (err) {
+    Sentry.captureException(err);
+    console.error("cron run failed:", err);
+    errors.push({ stage: "run", message: String(err) });
+  } finally {
+    // Always record the run outcome.
+    if (runId) {
+      await supabase
+        .from("cron_runs")
+        .update({
+          completed_at: new Date().toISOString(),
+          surveys_sent: surveysSentCount,
+          emails_attempted: emailsAttempted,
+          emails_failed: emailsFailed,
+          errors: errors.length ? errors : null,
+        })
+        .eq("id", runId);
+    }
+
+    // Alert the instance owner via Slack on any failure.
+    if (errors.length > 0 || emailsFailed > 0) {
+      const { data: owner } = await supabase
+        .from("profiles")
+        .select("slack_webhook_url")
+        .eq("is_owner", true)
+        .not("slack_webhook_url", "is", null)
+        .limit(1)
+        .maybeSingle();
+      const ownerSlack = (owner as { slack_webhook_url?: string } | null)?.slack_webhook_url;
+      if (ownerSlack) {
+        await notifyWebhooks(ownerSlack, undefined, {
+          title: "⚠️ PrimePulseQ cron run had failures",
+          text: `surveys_sent=${surveysSentCount}, emails_attempted=${emailsAttempted}, emails_failed=${emailsFailed}, errors=${errors.length}`,
+          surveyUrl: `${appUrl}/settings`,
+          companyName: "PrimePulseQ",
+        }).catch((e) => { Sentry.captureException(e); });
+      }
+    }
   }
 
-  return NextResponse.json({ message: "Done", sent: totalSent, surveys: surveys.length, purged, responsesPurged });
+  return NextResponse.json({
+    message: "Done",
+    sent: totalSent,
+    surveysSent: surveysSentCount,
+    emailsAttempted,
+    emailsFailed,
+    purged,
+    responsesPurged,
+  });
 }
 
 function buildEmailHtml({

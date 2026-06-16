@@ -64,6 +64,7 @@ beforeAll(async () => {
   await db.exec(mig("20260615000001_sliding_window_rate_limit.sql"));
   await db.exec(mig("20260615000004_actions.sql"));
   await db.exec(mig("20260615000005_question_library_and_templates.sql"));
+  await db.exec(mig("20260616000007_cron_runs.sql"));
 
   // A real Supabase-style non-superuser role that RLS actually applies to.
   await db.exec(`
@@ -171,6 +172,19 @@ describe("RLS cross-tenant isolation", () => {
     const bPrivate = await asUser(orgB.userId, `select id from survey_templates where name = 'A private'`);
     expect(aPrivate.length).toBe(1);
     expect(bPrivate.length).toBe(0);
+  });
+
+  it("cron_runs is readable only by instance owners", async () => {
+    // Seed a run as superuser.
+    await db.query(`insert into cron_runs (started_at) values (now())`);
+    // Non-owner tenant sees nothing.
+    const nonOwner = await asUser(orgA.userId, `select id from cron_runs`);
+    expect(nonOwner).toHaveLength(0);
+    // Promote orgA to owner → can read.
+    await db.query(`update profiles set is_owner = true where id = $1`, [orgA.userId]);
+    const owner = await asUser(orgA.userId, `select id from cron_runs`);
+    expect(owner.length).toBeGreaterThanOrEqual(1);
+    await db.query(`update profiles set is_owner = false where id = $1`, [orgA.userId]);
   });
 
   it("an anonymous user (no auth.uid) sees no surveys or responses", async () => {

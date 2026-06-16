@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useProfile, type Profile } from "@/hooks/useProfile";
 import { createClient } from "@/lib/supabase/client";
+import { formatDate } from "@/lib/utils";
 import { TierGate } from "@/components/tier-gate";
 import { TIER_LABELS, canAccess, type Tier } from "@/lib/tiers";
 
@@ -406,6 +407,8 @@ function SettingsInner() {
               </div>
             </CardContent>
           </Card>
+
+          {isOwner && <CronHistoryCard />}
         </TabsContent>
 
         {/* Billing */}
@@ -610,6 +613,86 @@ const PLANS = [
     features: ["Unlimited employees", "All Growth features", "Audit logs", "Priority support"],
   },
 ];
+
+interface CronRun {
+  id: string;
+  started_at: string;
+  completed_at: string | null;
+  surveys_sent: number;
+  emails_attempted: number;
+  emails_failed: number;
+  errors: unknown;
+}
+
+function CronHistoryCard() {
+  const [runs, setRuns] = useState<CronRun[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("cron_runs")
+      .select("id, started_at, completed_at, surveys_sent, emails_attempted, emails_failed, errors")
+      .order("started_at", { ascending: false })
+      .limit(10)
+      .then(({ data }) => {
+        setRuns((data ?? []) as CronRun[]);
+        setLoading(false);
+      });
+  }, []);
+
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="text-base">Cron history</CardTitle>
+        <CardDescription>The last 10 scheduled-survey runs (owner only).</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p className="text-sm text-gray-400">Loading…</p>
+        ) : runs.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">No runs recorded yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-white/10 text-left text-xs text-gray-400">
+                  <th className="py-2 pr-4 font-medium">When</th>
+                  <th className="py-2 pr-4 font-medium">Status</th>
+                  <th className="py-2 pr-4 font-medium">Surveys</th>
+                  <th className="py-2 pr-4 font-medium">Emails</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map((r) => {
+                  const failed = r.emails_failed > 0 || (Array.isArray(r.errors) && r.errors.length > 0);
+                  return (
+                    <tr key={r.id} className="border-b border-gray-50 dark:border-white/5 last:border-0">
+                      <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400 text-xs whitespace-nowrap">{formatDate(r.started_at)}</td>
+                      <td className="py-2.5 pr-4">
+                        {!r.completed_at ? (
+                          <Badge variant="warning">Running</Badge>
+                        ) : failed ? (
+                          <Badge variant="destructive">{r.emails_failed} failed</Badge>
+                        ) : (
+                          <Badge variant="success">OK</Badge>
+                        )}
+                      </td>
+                      <td className="py-2.5 pr-4 text-gray-700 dark:text-gray-300">{r.surveys_sent}</td>
+                      <td className="py-2.5 pr-4 text-gray-700 dark:text-gray-300">
+                        {r.emails_attempted - r.emails_failed}/{r.emails_attempted}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function BillingTab({ tier, isOwner, profile }: { tier: Tier; isOwner: boolean; profile: Profile | null }) {
   const [upgrading, setUpgrading] = useState<string | null>(null);
