@@ -45,6 +45,9 @@ export async function GET(request: NextRequest) {
   const fromEmail = resolveFromEmail();
 
   const now = new Date();
+  // Honor per-tenant send hours only when the cron runs hourly (Vercel Pro).
+  // On Hobby the schedule is daily, so we gate on day-of-week only.
+  const enforceHour = process.env.CRON_HOURLY === "true";
 
   // ── Observability: record this run, update it in finally ─────
   const { data: runRow } = await supabase
@@ -80,9 +83,9 @@ export async function GET(request: NextRequest) {
       .eq("id", survey.workspace_id)
       .single();
 
-    // Per-tenant timing gate: only send at the workspace's configured local
-    // day + hour for this frequency.
-    if (!shouldSendNow(survey.frequency, resolveSendPrefs(profile ?? {}), now)) {
+    // Per-tenant timing gate: only send on the workspace's configured local day
+    // (and hour, when running hourly) for this frequency.
+    if (!shouldSendNow(survey.frequency, resolveSendPrefs(profile ?? {}), now, { enforceHour })) {
       continue;
     }
 

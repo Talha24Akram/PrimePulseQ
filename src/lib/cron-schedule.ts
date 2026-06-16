@@ -60,12 +60,25 @@ export function localParts(now: Date, timezone: string): { hour: number; dow: nu
   return { hour, dow, dayOfMonth };
 }
 
-/** Whether a recurring survey should be sent at `now` for the given prefs. */
-export function shouldSendNow(frequency: string, prefs: SendPrefs, now: Date): boolean {
+/** Whether a recurring survey should be sent at `now` for the given prefs.
+ *
+ *  `enforceHour` (default true) gates on the tenant's configured local hour —
+ *  correct when the cron runs hourly (Vercel Pro). On Hobby the cron can only
+ *  run once per day, so the route passes `enforceHour: false` and we send on the
+ *  configured day regardless of hour (the per-tenant send-hour preference then
+ *  has no effect until you upgrade to an hourly schedule). */
+export function shouldSendNow(
+  frequency: string,
+  prefs: SendPrefs,
+  now: Date,
+  opts: { enforceHour?: boolean } = {}
+): boolean {
   if (frequency !== "weekly" && frequency !== "biweekly" && frequency !== "monthly") return false;
 
+  const enforceHour = opts.enforceHour ?? true;
   const { hour, dow, dayOfMonth } = localParts(now, prefs.timezone);
-  if (hour !== prefs.sendHour || dow !== prefs.sendDayOfWeek) return false;
+  if (dow !== prefs.sendDayOfWeek) return false;
+  if (enforceHour && hour !== prefs.sendHour) return false;
 
   if (frequency === "weekly") return true;
 

@@ -56,4 +56,14 @@ describe("shouldSendNow", () => {
   it("one-time never fires", () => {
     expect(shouldSendNow("one-time", { sendDayOfWeek: 1, sendHour: 8, timezone: "UTC" }, mon0800Z)).toBe(false);
   });
+
+  it("with enforceHour=false (daily Hobby cron) fires on the right day at any hour", () => {
+    const prefs = { sendDayOfWeek: 1, sendHour: 17, timezone: "UTC" }; // configured hour ≠ 08:00
+    // Hourly mode would skip this tick…
+    expect(shouldSendNow("weekly", prefs, mon0800Z)).toBe(false);
+    // …but daily mode sends because the day matches.
+    expect(shouldSendNow("weekly", prefs, mon0800Z, { enforceHour: false })).toBe(true);
+    // Still gated on the correct day, even in daily mode.
+    expect(shouldSendNow("weekly", { ...prefs, sendDayOfWeek: 3 }, mon0800Z, { enforceHour: false })).toBe(false);
+  });
 });
