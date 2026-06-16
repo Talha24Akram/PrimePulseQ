@@ -50,6 +50,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260616000007_cron_runs.sql` | `cron_runs` observability table (owner-only read) |
 | `20260616000008_email_status.sql` | `survey_tokens.email_status`/`email_error` + index (Resend retry) |
 | `20260616000009_rate_limit_cleanup.sql` | `rate_limit_events(created_at)` index + optional pg_cron sweep |
+| `20260616000010_plan_limits.sql` | DB triggers enforcing per-tier employee/active-survey limits |
 
 ## One-time setup after first deploy
 

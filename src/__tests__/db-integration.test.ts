@@ -51,6 +51,7 @@ beforeAll(async () => {
   await db.exec(migration("20260616000006_translations_check.sql"));
   await db.exec(migration("20260616000008_email_status.sql"));
   await db.exec(migration("20260616000009_rate_limit_cleanup.sql"));
+  await db.exec(migration("20260616000010_plan_limits.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
@@ -91,6 +92,9 @@ async function seedSurvey(opts: { status?: string } = {}) {
     `insert into auth.users (email) values ($1) returning id`,
     [`u${Math.random()}@x.com`]
   )).rows[0];
+  // Unlimited plan so the per-tier limits (tested separately) don't interfere
+  // with fixtures that create multiple surveys/employees per workspace.
+  await db.query(`update profiles set subscription_tier = 'enterprise' where id = $1`, [user.id]);
   const emp = (await db.query<{ id: string }>(
     `insert into employees (workspace_id, email) values ($1, $2) returning id`,
     [user.id, `e${Math.random()}@x.com`]
@@ -350,6 +354,40 @@ describe("purge_old_responses (data retention)", () => {
     try { await db.query(`update profiles set data_retention_days = 45 where id = $1`, [u]); }
     catch { failed = true; }
     expect(failed).toBe(true);
+  });
+});
+
+describe("plan limit triggers", () => {
+  it("blocks the 26th active employee on the free plan", async () => {
+    const u = await newUser(); // default free tier
+    for (let i = 0; i < 25; i++) {
+      await db.query(`insert into employees (workspace_id, email) values ($1, $2)`, [u, `e${i}-${Math.random()}@x.com`]);
+    }
+    let failed = false;
+    try { await db.query(`insert into employees (workspace_id, email) values ($1, $2)`, [u, `over@x.com`]); }
+    catch (e) { failed = true; expect(String(e)).toMatch(/Free plan limit: 25 employees/); }
+    expect(failed).toBe(true);
+  });
+
+  it("allows beyond the free limit on a higher tier", async () => {
+    const u = await newUser();
+    await db.query(`update profiles set subscription_tier = 'starter' where id = $1`, [u]);
+    for (let i = 0; i < 30; i++) {
+      await db.query(`insert into employees (workspace_id, email) values ($1, $2)`, [u, `e${i}-${Math.random()}@x.com`]);
+    }
+    const c = (await db.query<{ c: number }>(`select count(*)::int c from employees where workspace_id = $1`, [u])).rows[0].c;
+    expect(c).toBe(30);
+  });
+
+  it("blocks a 2nd active survey on the free plan", async () => {
+    const u = await newUser();
+    await db.query(`insert into surveys (workspace_id, title, status) values ($1, 'A', 'active')`, [u]);
+    let failed = false;
+    try { await db.query(`insert into surveys (workspace_id, title, status) values ($1, 'B', 'active')`, [u]); }
+    catch (e) { failed = true; expect(String(e)).toMatch(/Free plan allows 1 active survey/); }
+    expect(failed).toBe(true);
+    // Drafts are fine.
+    await db.query(`insert into surveys (workspace_id, title, status) values ($1, 'C', 'draft')`, [u]);
   });
 });
 
