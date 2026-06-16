@@ -9,9 +9,17 @@ import { getStrings, normalizeLocale, isRtl } from "@/lib/locales";
 import { clampExpiryDays, expiryFromNow, DEFAULT_SURVEY_EXPIRY_DAYS } from "@/lib/preferences";
 import { shouldSendNow, resolveSendPrefs } from "@/lib/cron-schedule";
 
-// This route is called by Vercel Cron daily.
-// It finds all active surveys whose frequency matches today's schedule
-// and sends email reminders to all active employees.
+// This route is called by Vercel Cron hourly.
+// It finds active recurring surveys whose per-tenant schedule fires this hour
+// and sends email reminders, with a retry pass for previously-failed emails.
+
+interface RetryToken {
+  token: string;
+  survey_id: string;
+  employee_id: string;
+  surveys: { title: string; description: string | null; status: string; workspace_id: string } | null;
+  employees: { email: string; name: string | null; locale: string | null } | null;
+}
 
 export async function GET(request: NextRequest) {
   // Guard: CRON_SECRET must be configured — an undefined secret means any
@@ -149,6 +157,17 @@ export async function GET(request: NextRequest) {
     emailsFailed += failed;
     if (sent > 0) surveysSentCount += 1;
 
+    // Record per-token delivery status for the retry pass below.
+    const okTokens: string[] = [];
+    for (let i = 0; i < employees.length; i++) {
+      const tok = tokenByEmployee.get(employees[i].id);
+      if (!tok) continue;
+      const r = results[i];
+      if (r.status === "fulfilled") okTokens.push(tok);
+      else await supabase.from("survey_tokens").update({ email_status: "failed", email_error: String(r.reason).slice(0, 500) }).eq("token", tok);
+    }
+    if (okTokens.length) await supabase.from("survey_tokens").update({ email_status: "sent", email_error: null }).in("token", okTokens);
+
     // Post to Slack / Teams — link to the admin survey view, not a personal token
     await notifyWebhooks(
       (profile as { slack_webhook_url?: string })?.slack_webhook_url,
@@ -170,6 +189,59 @@ export async function GET(request: NextRequest) {
       resource_id: survey.id,
       metadata: { sent, scheduled: true, frequency: survey.frequency },
     });
+  }
+
+  // ── Retry pass: one more attempt at any previously-failed emails ─────
+  // (still live, unused). Max one retry per cron run.
+  const { data: failedTokens } = await supabase
+    .from("survey_tokens")
+    .select("token, survey_id, employee_id, surveys(title, description, status, workspace_id), employees(email, name, locale)")
+    .eq("email_status", "failed")
+    .eq("used", false)
+    .gt("expires_at", now.toISOString())
+    .limit(200);
+
+  // supabase types to-one embeds as arrays; at runtime they are single objects.
+  const companyCache = new Map<string, string>();
+  for (const ft of (failedTokens ?? []) as unknown as RetryToken[]) {
+    const survey = ft.surveys;
+    const emp = ft.employees;
+    if (!survey || !emp || survey.status !== "active") continue;
+
+    let company = companyCache.get(survey.workspace_id);
+    if (!company) {
+      const { data: p } = await supabase.from("profiles").select("company_name, full_name").eq("id", survey.workspace_id).single();
+      company = (p?.company_name ?? p?.full_name ?? "Your Team") as string;
+      companyCache.set(survey.workspace_id, company);
+    }
+    const company2: string = company;
+
+    const locale = normalizeLocale(emp.locale);
+    const s = getStrings(locale);
+    const name = emp.name ?? emp.email.split("@")[0];
+    const surveyUrl = `${appUrl}/s/${ft.token}`;
+    const unsubToken = Buffer.from(`${survey.workspace_id}:${ft.employee_id}`).toString("base64url");
+    const unsubscribeUrl = `${appUrl}/api/unsubscribe?t=${unsubToken}`;
+
+    emailsAttempted += 1;
+    try {
+      await resend.emails.send({
+        from: `${company2} <${fromEmail}>`,
+        to: emp.email,
+        subject: s.emailSubject(survey.title),
+        headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
+        html: buildEmailHtml({
+          greeting: s.emailGreeting(name), intro: s.emailIntro, cta: s.takeSurvey,
+          dir: isRtl(locale) ? "rtl" : "ltr",
+          surveyTitle: survey.title, surveyDescription: survey.description ?? "",
+          surveyUrl, companyName: company2, unsubscribeUrl,
+        }),
+      });
+      await supabase.from("survey_tokens").update({ email_status: "sent", email_error: null }).eq("token", ft.token);
+    } catch (err) {
+      emailsFailed += 1;
+      await supabase.from("survey_tokens").update({ email_error: String(err).slice(0, 500) }).eq("token", ft.token);
+    }
   }
 
   // Housekeeping: purge used/expired survey tokens so the table stays small.

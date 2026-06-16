@@ -48,6 +48,7 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260616000005_send_schedule.sql` | `profiles` send day/hour/timezone (per-tenant cron) |
 | `20260616000006_translations_check.sql` | `surveys.translations` must be a JSON object |
 | `20260616000007_cron_runs.sql` | `cron_runs` observability table (owner-only read) |
+| `20260616000008_email_status.sql` | `survey_tokens.email_status`/`email_error` + index (Resend retry) |
 
 ## One-time setup after first deploy
 

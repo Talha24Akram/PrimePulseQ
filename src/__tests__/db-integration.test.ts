@@ -49,6 +49,7 @@ beforeAll(async () => {
   await db.exec(migration("20260616000004_more_prefs.sql"));
   await db.exec(migration("20260616000005_send_schedule.sql"));
   await db.exec(migration("20260616000006_translations_check.sql"));
+  await db.exec(migration("20260616000008_email_status.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
@@ -346,6 +347,26 @@ describe("purge_old_responses (data retention)", () => {
     const u = await newUser();
     let failed = false;
     try { await db.query(`update profiles set data_retention_days = 45 where id = $1`, [u]); }
+    catch { failed = true; }
+    expect(failed).toBe(true);
+  });
+});
+
+describe("survey_tokens.email_status", () => {
+  it("defaults to pending and accepts the three valid states", async () => {
+    const { surveyId, employeeId } = await seedSurvey();
+    const token = await makeToken(surveyId, employeeId);
+    const def = (await db.query<{ email_status: string }>(`select email_status from survey_tokens where token = $1`, [token])).rows[0].email_status;
+    expect(def).toBe("pending");
+
+    await db.query(`update survey_tokens set email_status = 'sent' where token = $1`, [token]);
+    await db.query(`update survey_tokens set email_status = 'failed', email_error = 'boom' where token = $1`, [token]);
+    const row = (await db.query<{ email_status: string; email_error: string }>(`select email_status, email_error from survey_tokens where token = $1`, [token])).rows[0];
+    expect(row.email_status).toBe("failed");
+    expect(row.email_error).toBe("boom");
+
+    let failed = false;
+    try { await db.query(`update survey_tokens set email_status = 'bogus' where token = $1`, [token]); }
     catch { failed = true; }
     expect(failed).toBe(true);
   });

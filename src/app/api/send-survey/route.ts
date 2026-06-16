@@ -139,6 +139,25 @@ export async function POST(request: NextRequest) {
     const sent = results.filter((r) => r.status === "fulfilled").length;
     const failed = results.filter((r) => r.status === "rejected").length;
 
+    // Record per-token delivery status so failures can be retried by the cron.
+    const sentTokens: string[] = [];
+    for (let i = 0; i < employees.length; i++) {
+      const tok = tokenByEmployee.get(employees[i].id);
+      if (!tok) continue;
+      const r = results[i];
+      if (r.status === "fulfilled") {
+        sentTokens.push(tok);
+      } else {
+        await serviceClient
+          .from("survey_tokens")
+          .update({ email_status: "failed", email_error: String(r.reason).slice(0, 500) })
+          .eq("token", tok);
+      }
+    }
+    if (sentTokens.length) {
+      await serviceClient.from("survey_tokens").update({ email_status: "sent", email_error: null }).in("token", sentTokens);
+    }
+
     // Post to Slack / Teams if configured
     const webhookSurveyUrl = `${appUrl}/surveys/${surveyId}`;
     await notifyWebhooks(
