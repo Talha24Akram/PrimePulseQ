@@ -10,6 +10,7 @@ import { resolveFromEmail } from "@/lib/email";
 import { getStrings, normalizeLocale, isRtl } from "@/lib/locales";
 import { blockCrossSite, requireJson } from "@/lib/csrf";
 import { clampExpiryDays, expiryFromNow, DEFAULT_SURVEY_EXPIRY_DAYS } from "@/lib/preferences";
+import { createUnsubscribeToken } from "@/lib/unsubscribe-token";
 
 export async function POST(request: NextRequest) {
   const csrf = blockCrossSite(request);
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
       employees.map((emp) => {
         const surveyToken = tokenByEmployee.get(emp.id);
         const surveyUrl = surveyToken ? `${appUrl}/s/${surveyToken}` : `${appUrl}/s/${surveyId}`;
-        const unsubToken = Buffer.from(`${user.id}:${emp.id}`).toString("base64url");
+        const unsubToken = createUnsubscribeToken(user.id, emp.id);
         const unsubscribeUrl = `${appUrl}/api/unsubscribe?t=${unsubToken}`;
         const locale = normalizeLocale((emp as { locale?: string }).locale);
         const s = getStrings(locale);

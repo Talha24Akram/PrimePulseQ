@@ -74,6 +74,10 @@ beforeAll(async () => {
     grant usage on schema public to authenticated;
     grant select, insert, update, delete on all tables in schema public to authenticated;
   `);
+  await db.exec(mig("20260616000014_profile_update_hardening.sql"));
+  await db.exec(mig("20260616000015_plan_feature_enforcement.sql"));
+  await db.exec(mig("20260616000016_employee_email_normalization.sql"));
+  await db.exec(mig("20260616000017_security_definer_search_path.sql"));
 
   // Seed two separate tenants as superuser (RLS bypassed for setup).
   orgA = await seedOrg();
@@ -127,6 +131,40 @@ describe("RLS cross-tenant isolation", () => {
     expect(aRows).toHaveLength(1);
     expect(bRows).toHaveLength(1);
     expect(aRows).not.toEqual(bRows);
+  });
+
+  it("a tenant can edit safe profile fields but cannot self-upgrade or become owner", async () => {
+    await asUser(orgA.userId, `update profiles set company_name = 'Acme' where id = '${orgA.userId}'`);
+    const safeUpdate = (await db.query<{ company_name: string | null }>(
+      `select company_name from profiles where id = $1`,
+      [orgA.userId]
+    )).rows[0];
+    expect(safeUpdate.company_name).toBe("Acme");
+
+    await db.exec(`set role authenticated; set "test.uid" = '${orgA.userId}';`);
+    let tierFailed = false;
+    let ownerFailed = false;
+    try {
+      await db.query(`update profiles set subscription_tier = 'enterprise' where id = '${orgA.userId}'`);
+    } catch {
+      tierFailed = true;
+    }
+    try {
+      await db.query(`update profiles set is_owner = true where id = '${orgA.userId}'`);
+    } catch {
+      ownerFailed = true;
+    } finally {
+      await db.exec(`set "test.uid" = ''; reset role;`);
+    }
+
+    expect(tierFailed).toBe(true);
+    expect(ownerFailed).toBe(true);
+    const protectedFields = (await db.query<{ subscription_tier: string; is_owner: boolean }>(
+      `select subscription_tier, is_owner from profiles where id = $1`,
+      [orgA.userId]
+    )).rows[0];
+    expect(protectedFields.subscription_tier).toBe("free");
+    expect(protectedFields.is_owner).toBe(false);
   });
 
   it("a tenant cannot insert an action for another tenant (RLS WITH CHECK)", async () => {

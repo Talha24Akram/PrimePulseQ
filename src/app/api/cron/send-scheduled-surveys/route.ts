@@ -8,6 +8,7 @@ import { resolveFromEmail } from "@/lib/email";
 import { getStrings, normalizeLocale, isRtl } from "@/lib/locales";
 import { clampExpiryDays, expiryFromNow, DEFAULT_SURVEY_EXPIRY_DAYS } from "@/lib/preferences";
 import { shouldSendNow, resolveSendPrefs } from "@/lib/cron-schedule";
+import { createUnsubscribeToken } from "@/lib/unsubscribe-token";
 
 // This route is called by Vercel Cron hourly.
 // It finds active recurring surveys whose per-tenant schedule fires this hour
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
       employees.map((emp) => {
         const surveyToken = tokenByEmployee.get(emp.id);
         const surveyUrl = surveyToken ? `${appUrl}/s/${surveyToken}` : `${appUrl}/s/${survey.id}`;
-        const unsubToken = Buffer.from(`${survey.workspace_id}:${emp.id}`).toString("base64url");
+        const unsubToken = createUnsubscribeToken(survey.workspace_id, emp.id);
         const unsubscribeUrl = `${appUrl}/api/unsubscribe?t=${unsubToken}`;
         const locale = normalizeLocale((emp as { locale?: string }).locale);
         const s = getStrings(locale);
@@ -225,7 +226,7 @@ export async function GET(request: NextRequest) {
     const s = getStrings(locale);
     const name = emp.name ?? emp.email.split("@")[0];
     const surveyUrl = `${appUrl}/s/${ft.token}`;
-    const unsubToken = Buffer.from(`${survey.workspace_id}:${ft.employee_id}`).toString("base64url");
+    const unsubToken = createUnsubscribeToken(survey.workspace_id, ft.employee_id);
     const unsubscribeUrl = `${appUrl}/api/unsubscribe?t=${unsubToken}`;
 
     emailsAttempted += 1;

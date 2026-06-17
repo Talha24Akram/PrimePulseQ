@@ -117,6 +117,9 @@ ANTHROPIC_API_KEY=sk-ant-your-key
 # Dedicated salt for hashing IPs in rate limiting. Falls back to CRON_SECRET if unset.
 RATE_LIMIT_SALT=your-random-rate-limit-salt
 
+# Dedicated secret for signing unsubscribe links. Falls back to CRON_SECRET if unset.
+UNSUBSCRIBE_SECRET=your-random-unsubscribe-secret
+
 # Required only to use the one-time POST /api/setup/owner route (disabled unless set).
 SETUP_SECRET=your-random-setup-secret
 ```

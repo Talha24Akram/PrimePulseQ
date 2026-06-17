@@ -55,6 +55,10 @@ beforeAll(async () => {
   await db.exec(migration("20260616000011_audit_helpers.sql"));
   await db.exec(migration("20260616000012_survey_closed_at.sql"));
   await db.exec(migration("20260616000013_soft_deletes.sql"));
+  await db.exec(migration("20260616000014_profile_update_hardening.sql"));
+  await db.exec(migration("20260616000015_plan_feature_enforcement.sql"));
+  await db.exec(migration("20260616000016_employee_email_normalization.sql"));
+  await db.exec(migration("20260616000017_security_definer_search_path.sql"));
 }, 60000);
 
 async function seedSnapshot(industry: string, band: string, score: number) {
@@ -407,6 +411,102 @@ describe("plan limit triggers", () => {
     expect(failed).toBe(true);
     // Drafts are fine.
     await db.query(`insert into surveys (workspace_id, title, status) values ($1, 'C', 'draft')`, [u]);
+  });
+
+  it("blocks recurring surveys on the free plan", async () => {
+    const u = await newUser();
+    let failed = false;
+    try {
+      await db.query(
+        `insert into surveys (workspace_id, title, status, frequency) values ($1, 'Weekly', 'draft', 'weekly')`,
+        [u]
+      );
+    } catch (e) {
+      failed = true;
+      expect(String(e)).toMatch(/Recurring surveys require Starter or higher/);
+    }
+    expect(failed).toBe(true);
+
+    await db.query(`update profiles set subscription_tier = 'starter' where id = $1`, [u]);
+    await db.query(
+      `insert into surveys (workspace_id, title, status, frequency) values ($1, 'Weekly', 'draft', 'weekly')`,
+      [u]
+    );
+  });
+
+  it("enforces saved-template limits per plan", async () => {
+    const freeUser = await newUser();
+    await db.query(
+      `insert into survey_templates (workspace_id, name, questions) values ($1, 'One', '[]'::jsonb)`,
+      [freeUser]
+    );
+
+    let freeFailed = false;
+    try {
+      await db.query(
+        `insert into survey_templates (workspace_id, name, questions) values ($1, 'Two', '[]'::jsonb)`,
+        [freeUser]
+      );
+    } catch (e) {
+      freeFailed = true;
+      expect(String(e)).toMatch(/Free plan allows 1 saved template/);
+    }
+    expect(freeFailed).toBe(true);
+
+    const starterUser = await newUser();
+    await db.query(`update profiles set subscription_tier = 'starter' where id = $1`, [starterUser]);
+    await db.query(`insert into survey_templates (workspace_id, name, questions) values ($1, 'One', '[]'::jsonb)`, [starterUser]);
+    await db.query(`insert into survey_templates (workspace_id, name, questions) values ($1, 'Two', '[]'::jsonb)`, [starterUser]);
+
+    let starterFailed = false;
+    try {
+      await db.query(
+        `insert into survey_templates (workspace_id, name, questions) values ($1, 'Three', '[]'::jsonb)`,
+        [starterUser]
+      );
+    } catch (e) {
+      starterFailed = true;
+      expect(String(e)).toMatch(/Starter plan allows 2 saved template/);
+    }
+    expect(starterFailed).toBe(true);
+  });
+});
+
+describe("employee email normalization", () => {
+  it("trims and lowercases employee emails before uniqueness checks", async () => {
+    const u = await newUser();
+    await db.query(`insert into employees (workspace_id, email) values ($1, '  Person@Example.COM  ')`, [u]);
+
+    const row = (await db.query<{ email: string }>(
+      `select email from employees where workspace_id = $1`,
+      [u]
+    )).rows[0];
+    expect(row.email).toBe("person@example.com");
+
+    let failed = false;
+    try {
+      await db.query(`insert into employees (workspace_id, email) values ($1, 'PERSON@example.com')`, [u]);
+    } catch {
+      failed = true;
+    }
+    expect(failed).toBe(true);
+  });
+});
+
+describe("security definer hardening", () => {
+  it("pins public SECURITY DEFINER functions to a safe search_path", async () => {
+    const rows = (await db.query<{ proname: string; proconfig: string[] | null }>(`
+      select p.proname, p.proconfig
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.prosecdef = true
+    `)).rows;
+
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.proconfig ?? [], row.proname).toContain("search_path=public, pg_temp");
+    }
   });
 });
 

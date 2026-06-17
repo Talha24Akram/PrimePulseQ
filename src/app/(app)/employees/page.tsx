@@ -80,7 +80,8 @@ export default function EmployeesPage() {
   }
 
   async function handleAdd() {
-    if (!newEmployee.email) { setAddError("Email is required."); return; }
+    const email = newEmployee.email.trim().toLowerCase();
+    if (!email) { setAddError("Email is required."); return; }
     setAdding(true);
     setAddError("");
     const supabase = createClient();
@@ -89,17 +90,17 @@ export default function EmployeesPage() {
 
     const { error } = await supabase.from("employees").insert({
       workspace_id: user.id,
-      email: newEmployee.email,
-      name: newEmployee.name || null,
-      department: newEmployee.department || null,
-      role: newEmployee.role || null,
+      email,
+      name: newEmployee.name.trim() || null,
+      department: newEmployee.department.trim() || null,
+      role: newEmployee.role.trim() || null,
       locale: newEmployee.locale || "en",
     });
 
     if (error) {
       setAddError(error.message.includes("unique") ? "This email is already added." : error.message);
     } else {
-      await logAudit("employee.added", { resourceType: "employee", metadata: { email: newEmployee.email } });
+      await logAudit("employee.added", { resourceType: "employee", metadata: { email } });
 
       // Send welcome / confirmation email (fire and forget — don't block on failure)
       try {
@@ -107,8 +108,8 @@ export default function EmployeesPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            employeeEmail: newEmployee.email,
-            employeeName: newEmployee.name || null,
+            employeeEmail: email,
+            employeeName: newEmployee.name.trim() || null,
             companyName: profile?.company_name ?? profile?.full_name ?? undefined,
             adminEmail: profile?.email ?? undefined,
           }),

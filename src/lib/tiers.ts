@@ -6,7 +6,7 @@
 export type Tier = 'free' | 'starter' | 'growth' | 'enterprise';
 
 export const TIER_LIMITS = {
-  free:       { employees: 10,        surveyTemplates: 1,  historyDays: 7   },
+  free:       { employees: 25,        surveyTemplates: 1,  historyDays: 7   },
   starter:    { employees: 100,       surveyTemplates: 2,  historyDays: 30  },
   growth:     { employees: 500,       surveyTemplates: 999, historyDays: 365 },
   enterprise: { employees: Infinity,  surveyTemplates: 999, historyDays: 999 },

@@ -3,27 +3,9 @@ import * as Sentry from "@sentry/nextjs";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { blockCrossSite, requireJson } from "@/lib/csrf";
+import { isAllowedWebhookUrl } from "@/lib/webhooks";
 
 // Allowlist of trusted webhook hostnames — prevents SSRF to internal/cloud-metadata services.
-const ALLOWED_WEBHOOK_HOSTS = [
-  "hooks.slack.com",
-  "outlook.office.com",
-  "outlook.office365.com",
-  "hooks.office.com",
-];
-
-function isAllowedWebhookUrl(raw: string): boolean {
-  try {
-    const parsed = new URL(raw);
-    if (parsed.protocol !== "https:") return false;
-    return ALLOWED_WEBHOOK_HOSTS.some(
-      (host) => parsed.hostname === host || parsed.hostname.endsWith("." + host)
-    );
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
   const csrf = blockCrossSite(request);
   if (csrf) return csrf;
@@ -42,8 +24,11 @@ export async function POST(request: NextRequest) {
 
   const { url, type } = await request.json();
   if (!url) return NextResponse.json({ error: "URL required" }, { status: 400 });
+  if (type !== "slack" && type !== "teams") {
+    return NextResponse.json({ error: "Invalid webhook type" }, { status: 400 });
+  }
 
-  if (!isAllowedWebhookUrl(url)) {
+  if (!isAllowedWebhookUrl(url, type)) {
     return NextResponse.json(
       { error: "Invalid webhook URL. Must be a Slack (hooks.slack.com) or Teams (outlook.office.com) URL over HTTPS." },
       { status: 400 }

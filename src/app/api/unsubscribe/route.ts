@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
 
 // Public endpoint — no auth required (employees are not app users).
 // Uses HMAC-signed token in URL to prevent enumeration or spoofing.
@@ -17,14 +18,8 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  let employeeId: string;
-  try {
-    const decoded = Buffer.from(token, "base64url").toString("utf-8");
-    const parts = decoded.split(":");
-    if (parts.length !== 2) throw new Error("bad format");
-    employeeId = parts[1];
-    if (!employeeId.match(/^[0-9a-f-]{36}$/)) throw new Error("bad uuid");
-  } catch {
+  const verified = verifyUnsubscribeToken(token);
+  if (!verified) {
     return new NextResponse(optOutPage("Invalid unsubscribe link."), {
       headers: { "Content-Type": "text/html" },
     });
@@ -38,7 +33,8 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase
     .from("employees")
     .update({ email_opted_out: true })
-    .eq("id", employeeId);
+    .eq("workspace_id", verified.workspaceId)
+    .eq("id", verified.employeeId);
 
   if (error) {
     return new NextResponse(optOutPage("Something went wrong. Please contact your HR team."), {

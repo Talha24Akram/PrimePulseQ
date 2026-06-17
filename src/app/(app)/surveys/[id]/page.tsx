@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Copy, Send, BarChart3, Users, Clock, CheckCircle2, Check, Mail, X, FileDown } from "lucide-react";
+import { ArrowLeft, Send, BarChart3, Users, Clock, CheckCircle2, Mail, X, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +52,6 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
   const [questions, setQuestions] = useState<Question[]>([]);
   const [responses, setResponses] = useState<Response[]>([]);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
   const [activating, setActivating] = useState(false);
 
   // Email modal state
@@ -79,12 +78,6 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
     }
     load();
   }, [id]);
-
-  function copyLink() {
-    navigator.clipboard.writeText(`${window.location.origin}/s/${id}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   async function activateSurvey() {
     setActivating(true);
@@ -177,8 +170,6 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const responseCount = responses.length;
-  const surveyUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/s/${id}`;
-
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto">
       {/* Header */}
@@ -200,10 +191,6 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" className="gap-2" onClick={copyLink}>
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            {copied ? "Copied!" : "Copy link"}
-          </Button>
           {responses.length > 0 && (
             <Button variant="outline" size="sm" className="gap-2" onClick={async () => {
               exportSurveyPDF(survey, questions, responses);
@@ -250,30 +237,6 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
           </Card>
         ))}
       </div>
-
-      {/* Share link */}
-      <Card className="mb-6 sm:mb-8 border-violet-300 bg-violet-50 dark:border-violet-500/20 dark:bg-violet-500/5">
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">Anonymous survey link</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Share this link with employees — no login required. Responses are 100% anonymous.</p>
-            </div>
-            <Button variant="outline" onClick={copyLink} className="flex-shrink-0">
-              {copied ? "Copied!" : "Copy link"}
-            </Button>
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 truncate">
-            {surveyUrl}
-          </p>
-          {survey.status === "draft" && (
-            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">⚠ Activate this survey first — employees can&apos;t respond while it&apos;s a draft.</p>
-          )}
-          {survey.status === "active" && (
-            <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">✓ Survey is live — employees can respond via this link or by email invitation below.</p>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Email modal */}
       {showEmailModal && (
@@ -370,7 +333,7 @@ export default function SurveyDetailPage({ params }: { params: Promise<{ id: str
             <Card>
               <CardContent className="p-12 text-center text-gray-400">
                 <p className="text-lg font-medium mb-1">No responses yet</p>
-                <p className="text-sm">Share the link above with your employees to start collecting responses.</p>
+                <p className="text-sm">Send email invitations to employees to start collecting responses.</p>
               </CardContent>
             </Card>
           ) : responseCount < minCohort ? (

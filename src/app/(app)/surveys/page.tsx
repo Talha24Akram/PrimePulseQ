@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Search, Copy, Trash2, Eye, Send, Check } from "lucide-react";
+import { Plus, Search, Trash2, Eye, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,6 @@ export default function SurveysPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "draft" | "closed">("all");
-  const [copied, setCopied] = useState<string | null>(null);
 
   const tier = profile?.subscription_tier ?? "free";
   const isOwner = profile?.is_owner ?? false;
@@ -90,13 +89,6 @@ export default function SurveysPage() {
     if (!error) {
       setSurveys((prev) => prev.map((s) => s.id === survey.id ? { ...s, status: "active" } : s));
     }
-  }
-
-  function copyLink(surveyId: string) {
-    const url = `${window.location.origin}/s/${surveyId}`;
-    navigator.clipboard.writeText(url);
-    setCopied(surveyId);
-    setTimeout(() => setCopied(null), 2000);
   }
 
   const filtered = surveys.filter((s) => {
@@ -236,17 +228,6 @@ export default function SurveysPage() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       </Link>
-                      {survey.status !== "draft" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-gray-700"
-                          onClick={() => copyLink(survey.id)}
-                          title="Copy survey link"
-                        >
-                          {copied === survey.id ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                      )}
                       {survey.status === "draft" && (
                         <Button
                           variant="ghost"

@@ -54,6 +54,10 @@ database. Instead, add a **new** timestamped file with just the delta
 | `20260616000011_audit_helpers.sql` | `audit_logs.actor_id` + `write_audit_log()` for server-side audit entries |
 | `20260616000012_survey_closed_at.sql` | `surveys.closed_at` (auto-close + notify) |
 | `20260616000013_soft_deletes.sql` | `deleted_at` on surveys/employees/questions; per-command RLS hides soft-deleted rows; deleted-aware plan limits; `purge_deleted_surveys()` (30-day sweep) |
+| `20260616000014_profile_update_hardening.sql` | Column-level profile update grants so browser users can edit workspace settings but not owner/billing fields |
+| `20260616000015_plan_feature_enforcement.sql` | DB triggers enforcing paid feature gates for recurring surveys and saved-template limits |
+| `20260616000016_employee_email_normalization.sql` | DB trigger trimming/lowercasing employee emails before uniqueness checks |
+| `20260616000017_security_definer_search_path.sql` | Pins SECURITY DEFINER functions to `public, pg_temp` search path |
 
 ## One-time setup after first deploy
 

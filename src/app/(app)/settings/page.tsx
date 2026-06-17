@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
 import { TierGate } from "@/components/tier-gate";
 import { TIER_LABELS, canAccess, type Tier } from "@/lib/tiers";
+import { isAllowedWebhookUrl } from "@/lib/webhooks";
 
 export default function SettingsPage() {
   return (
@@ -1008,17 +1009,32 @@ function IntegrationCard({
   useEffect(() => { if (saved) setUrl(saved); }, [saved]);
 
   async function handleSave() {
+    const trimmedUrl = url.trim();
+    if (trimmedUrl && !isAllowedWebhookUrl(trimmedUrl, webhookType)) {
+      setStatus("error");
+      setErrMsg(`Enter a valid ${name} webhook URL over HTTPS.`);
+      return;
+    }
+
     setSaving(true);
     setStatus("idle");
-    const { error } = await updateProfile({ [field]: url || null } as Partial<Profile>);
+    const { error } = await updateProfile({ [field]: trimmedUrl || null } as Partial<Profile>);
     setSaving(false);
     if (error) { setStatus("error"); setErrMsg(error); }
-    else setStatus("saved");
+    else { setUrl(trimmedUrl); setStatus("saved"); }
     setTimeout(() => setStatus("idle"), 2000);
   }
 
   async function handleTest() {
     if (!url) return;
+    const trimmedUrl = url.trim();
+    if (!isAllowedWebhookUrl(trimmedUrl, webhookType)) {
+      setStatus("error");
+      setErrMsg(`Enter a valid ${name} webhook URL over HTTPS.`);
+      setTimeout(() => setStatus("idle"), 3000);
+      return;
+    }
+
     setTesting(true);
     setStatus("idle");
     setErrMsg("");
@@ -1026,7 +1042,7 @@ function IntegrationCard({
       const res = await fetch("/api/integrations/test-webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, type: webhookType }),
+        body: JSON.stringify({ url: trimmedUrl, type: webhookType }),
       });
       const data = await res.json();
       if (res.ok) setStatus("tested");

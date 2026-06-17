@@ -1,11 +1,32 @@
 // Shared utility for posting to Slack / Teams webhooks
 
+type WebhookType = "slack" | "teams";
+
+const ALLOWED_WEBHOOK_HOSTS: Record<WebhookType, string[]> = {
+  slack: ["hooks.slack.com"],
+  teams: ["outlook.office.com", "outlook.office365.com", "hooks.office.com"],
+};
+
+export function isAllowedWebhookUrl(raw: string, type: WebhookType): boolean {
+  try {
+    const parsed = new URL(raw.trim());
+    if (parsed.protocol !== "https:") return false;
+    return ALLOWED_WEBHOOK_HOSTS[type].some(
+      (host) => parsed.hostname === host || parsed.hostname.endsWith("." + host)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function postToSlack(webhookUrl: string, payload: {
   title: string;
   text: string;
   surveyUrl?: string;
   companyName?: string;
 }) {
+  if (!isAllowedWebhookUrl(webhookUrl, "slack")) return false;
+
   const blocks: object[] = [
     {
       type: "section",
@@ -61,6 +82,8 @@ export async function postToTeams(webhookUrl: string, payload: {
   surveyUrl?: string;
   companyName?: string;
 }) {
+  if (!isAllowedWebhookUrl(webhookUrl, "teams")) return false;
+
   const body: Record<string, unknown> = {
     type: "message",
     attachments: [
@@ -129,7 +152,7 @@ export async function notifyWebhooks(
   payload: { title: string; text: string; surveyUrl?: string; companyName?: string }
 ) {
   const promises: Promise<boolean>[] = [];
-  if (slackUrl) promises.push(postToSlack(slackUrl, payload));
-  if (teamsUrl) promises.push(postToTeams(teamsUrl, payload));
+  if (slackUrl && isAllowedWebhookUrl(slackUrl, "slack")) promises.push(postToSlack(slackUrl, payload));
+  if (teamsUrl && isAllowedWebhookUrl(teamsUrl, "teams")) promises.push(postToTeams(teamsUrl, payload));
   await Promise.allSettled(promises);
 }
