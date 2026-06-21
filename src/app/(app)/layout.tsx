@@ -2,9 +2,9 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-950 overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-[#080b12]">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-950 pt-14 pb-16 md:pt-0 md:pb-0">
+      <main className="w-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-gray-50/50 pb-16 pt-14 md:pb-0 md:pt-0 dark:bg-[#080b12]">
         {children}
       </main>
     </div>
