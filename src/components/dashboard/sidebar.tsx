@@ -48,14 +48,14 @@ export function Sidebar() {
   return (
     <>
       <div className="relative z-40 hidden h-screen w-[72px] flex-shrink-0 md:block">
-        <aside className="group/sidebar absolute inset-y-0 left-0 flex w-[72px] flex-col overflow-hidden border-r border-gray-200/80 bg-white/95 shadow-[12px_0_32px_-24px_rgba(16,24,40,0.25)] backdrop-blur-xl transition-[width,box-shadow] duration-200 ease-out hover:w-56 hover:shadow-[18px_0_44px_-28px_rgba(16,24,40,0.4)] focus-within:w-56 dark:border-white/8 dark:bg-[#0d1018]/95 dark:shadow-[14px_0_36px_-24px_rgba(0,0,0,0.9)]">
+        <aside className="group/sidebar absolute inset-y-0 left-0 flex w-[72px] flex-col overflow-hidden border-r border-gray-200/80 bg-white/95 shadow-[12px_0_32px_-24px_rgba(16,24,40,0.25)] backdrop-blur-xl transition-[width,box-shadow] duration-200 ease-out hover:w-56 hover:shadow-[18px_0_44px_-28px_rgba(16,24,40,0.4)] has-[:focus-visible]:w-56 dark:border-white/8 dark:bg-[#0d1018]/95 dark:shadow-[14px_0_36px_-24px_rgba(0,0,0,0.9)]">
           <Link
             href="/dashboard"
             className="flex h-[72px] items-center gap-3 border-b border-gray-200/70 px-5 dark:border-white/8"
             aria-label="PrimePulseQ dashboard"
           >
             <Image src="/logo.png" alt="" width={32} height={32} className="h-8 w-8 flex-shrink-0 object-contain" />
-            <span className="whitespace-nowrap text-sm font-semibold text-gray-950 opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100 dark:text-white">
+            <span className="whitespace-nowrap text-sm font-semibold text-gray-950 opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-has-[:focus-visible]/sidebar:opacity-100 dark:text-white">
               PrimePulseQ
             </span>
           </Link>
@@ -76,11 +76,11 @@ export function Sidebar() {
                   )}
                 >
                   <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive ? "text-violet-600 dark:text-violet-400" : "text-gray-400 dark:text-gray-500")} />
-                  <span className="min-w-0 flex-1 whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+                  <span className="min-w-0 flex-1 whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-has-[:focus-visible]/sidebar:opacity-100">
                     {item.label}
                   </span>
                   {isActive ? (
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-0 transition-opacity group-hover/sidebar:opacity-60 group-focus-within/sidebar:opacity-60" />
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-0 transition-opacity group-hover/sidebar:opacity-60 group-has-[:focus-visible]/sidebar:opacity-60" />
                   ) : null}
                 </Link>
               );
@@ -97,7 +97,7 @@ export function Sidebar() {
                 <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-semibold text-white">
                   {initial}
                 </div>
-                <div className="min-w-0 flex-1 whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+                <div className="min-w-0 flex-1 whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-has-[:focus-visible]/sidebar:opacity-100">
                   <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{displayName || profile.email}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{tierLabel} plan</p>
                 </div>
@@ -109,7 +109,7 @@ export function Sidebar() {
               className="flex h-10 w-full items-center gap-3 overflow-hidden rounded-xl px-3 text-sm font-medium text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
             >
               <LogOut className="h-5 w-5 flex-shrink-0" />
-              <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+              <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-has-[:focus-visible]/sidebar:opacity-100">
                 Sign out
               </span>
             </button>
