@@ -91,6 +91,7 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/surveys") ||
     request.nextUrl.pathname.startsWith("/employees") ||
     request.nextUrl.pathname.startsWith("/analytics") ||
+    request.nextUrl.pathname.startsWith("/actions") ||
     request.nextUrl.pathname.startsWith("/settings");
 
   if (!user && isDashboardRoute) {

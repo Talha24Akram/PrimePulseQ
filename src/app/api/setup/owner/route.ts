@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import * as Sentry from "@sentry/nextjs";
 import { blockCrossSite, requireJson } from "@/lib/csrf";
 import { createServerClient } from "@supabase/ssr";
@@ -13,6 +14,15 @@ import { cookies } from "next/headers";
 // matching `secret`. Without this, a random first signup on a public deploy
 // could claim ownership. The DB-level one-time guard in claim_owner() is the
 // second layer; this secret is the first.
+// Constant-time secret comparison so a wrong secret can't be recovered via
+// response-timing analysis. Lengths are compared first (cheap and not secret).
+function secretsMatch(provided: string | undefined, expected: string): boolean {
+  if (!provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function POST(request: NextRequest) {
   const csrf = blockCrossSite(request);
   if (csrf) return csrf;
@@ -35,7 +45,7 @@ export async function POST(request: NextRequest) {
       // fall through — missing/empty body fails the secret check below
     }
 
-    if (body.secret !== setupSecret) {
+    if (!secretsMatch(body.secret, setupSecret)) {
       return NextResponse.json({ error: "Invalid setup secret" }, { status: 403 });
     }
 

@@ -120,7 +120,10 @@ export async function POST(request: NextRequest) {
           from: `${fromName} <${fromEmail}>`,
           to: emp.email,
           subject: s.emailSubject(survey.title),
-          headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
+          headers: {
+            "List-Unsubscribe": `<${unsubscribeUrl}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
           html: buildEmailHtml({
             greeting: s.emailGreeting(name),
             intro: s.emailIntro,

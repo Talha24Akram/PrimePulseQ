@@ -63,7 +63,14 @@ export async function GET() {
     ...questions.map((q) => String(r.answers?.[q.id] ?? "")),
   ]);
 
-  const csvEscape = (val: string) => `"${val.replace(/"/g, '""')}"`;
+  // Neutralize CSV/formula injection: a cell that a spreadsheet might evaluate
+  // as a formula (leading = + - @, or a tab/CR that some parsers strip) is
+  // prefixed with a single quote. Survey answers are untrusted public input, so
+  // a respondent could otherwise smuggle =HYPERLINK(...) / =cmd|... into a cell.
+  const csvEscape = (val: string) => {
+    const safe = /^[=+\-@\t\r]/.test(val) ? `'${val}` : val;
+    return `"${safe.replace(/"/g, '""')}"`;
+  };
   const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n");
 
   return new NextResponse(csv, {

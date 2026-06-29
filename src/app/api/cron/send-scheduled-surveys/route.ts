@@ -140,7 +140,10 @@ export async function GET(request: NextRequest) {
           from: `${companyName} <${fromEmail}>`,
           to: emp.email,
           subject: s.emailSubject(survey.title),
-          headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
+          headers: {
+            "List-Unsubscribe": `<${unsubscribeUrl}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
           html: buildEmailHtml({
             greeting: s.emailGreeting(name),
             intro: s.emailIntro,
@@ -235,7 +238,10 @@ export async function GET(request: NextRequest) {
         from: `${company2} <${fromEmail}>`,
         to: emp.email,
         subject: s.emailSubject(survey.title),
-        headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
+        headers: {
+          "List-Unsubscribe": `<${unsubscribeUrl}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
         html: buildEmailHtml({
           greeting: s.emailGreeting(name), intro: s.emailIntro, cta: s.takeSurvey,
           dir: isRtl(locale) ? "rtl" : "ltr",

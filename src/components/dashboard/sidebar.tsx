@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -34,6 +35,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { profile } = useProfile();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -136,6 +138,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setMoreOpen(false)}
               className={cn(
                 "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-medium transition-colors",
                 isActive ? "text-violet-600 dark:text-violet-400" : "text-gray-400 dark:text-gray-500"
@@ -147,24 +150,45 @@ export function Sidebar() {
           );
         })}
 
-        <details className="group/more relative min-w-0 flex-1">
-          <summary className="flex cursor-pointer list-none flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-medium text-gray-400 marker:content-none dark:text-gray-500">
+        <div className="relative min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            aria-expanded={moreOpen}
+            aria-label="More navigation"
+            className={cn(
+              "flex w-full flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-medium transition-colors",
+              moreOpen ? "text-violet-600 dark:text-violet-400" : "text-gray-400 dark:text-gray-500"
+            )}
+          >
             <MoreHorizontal className="h-5 w-5" />
             <span>More</span>
-          </summary>
-          <div className="absolute bottom-14 right-2 w-48 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#151923]">
-            {navItems.slice(4).map((item) => (
-              <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/6">
-                <item.icon className="h-4 w-4 text-gray-400" />
-                {item.label}
-              </Link>
-            ))}
-            <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10">
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </button>
-          </div>
-        </details>
+          </button>
+          {moreOpen ? (
+            <>
+              {/* Tap-outside backdrop — closes the sheet (native details never did). */}
+              <button
+                type="button"
+                aria-hidden
+                tabIndex={-1}
+                onClick={() => setMoreOpen(false)}
+                className="fixed inset-0 z-40 cursor-default"
+              />
+              <div className="absolute bottom-14 right-2 z-50 w-48 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#151923]">
+                {navItems.slice(4).map((item) => (
+                  <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/6">
+                    <item.icon className="h-4 w-4 text-gray-400" />
+                    {item.label}
+                  </Link>
+                ))}
+                <button onClick={() => { setMoreOpen(false); handleLogout(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10">
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
       </nav>
     </>
   );

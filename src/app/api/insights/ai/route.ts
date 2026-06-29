@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { generateAIInsights } from "@/lib/ai-insights";
+import { blockCrossSite, requireJson } from "@/lib/csrf";
 
 // Validates the aggregate (anonymous) metrics the client computed from its own
 // RLS-scoped data. The route does not read any tenant data itself — it only
@@ -18,6 +19,14 @@ const InsightInputSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Cookie-authenticated, so guard against cross-site invocation (triggering
+  // billable model calls with a victim's session) and require a JSON body —
+  // consistent with the other authenticated mutating routes.
+  const csrf = blockCrossSite(request);
+  if (csrf) return csrf;
+  const ct = requireJson(request);
+  if (ct) return ct;
+
   // Auth check — must be a signed-in workspace user.
   const cookieStore = await cookies();
   const supabase = createServerClient(

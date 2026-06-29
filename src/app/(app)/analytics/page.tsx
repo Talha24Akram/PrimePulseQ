@@ -429,7 +429,7 @@ export default function AnalyticsPage() {
                 <Badge variant={enps >= 30 ? "success" : enps >= 0 ? "warning" : "destructive"} className="mt-2 text-xs">
                   {enps >= 50 ? "Excellent" : enps >= 30 ? "Good" : enps >= 0 ? "Fair" : "Poor"}
                 </Badge>
-                <p className="text-xs text-gray-400 mt-2 leading-relaxed">Not a standard eNPS — requires a dedicated "recommend" question for that.</p>
+                <p className="text-xs text-gray-400 mt-2 leading-relaxed">Not a standard eNPS — requires a dedicated &ldquo;recommend&rdquo; question for that.</p>
               </CardContent>
             </Card>
           </div>
@@ -584,7 +584,7 @@ export default function AnalyticsPage() {
                   ) : (
                     <>
                       <div className="mb-5 p-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-sm text-blue-800 dark:text-blue-300">
-                        <strong>Why no per-department scores?</strong> Survey responses are fully anonymous — no employee identity is linked to any answer. Computing a "department score" would require knowing which respondent belongs to which department, which would break anonymity. The chart below shows headcount distribution only.
+                        <strong>Why no per-department scores?</strong> Survey responses are fully anonymous — no employee identity is linked to any answer. Computing a &ldquo;department score&rdquo; would require knowing which respondent belongs to which department, which would break anonymity. The chart below shows headcount distribution only.
                       </div>
                       <div className="space-y-3">
                         {departmentScores

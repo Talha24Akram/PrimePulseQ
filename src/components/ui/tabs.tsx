@@ -12,7 +12,12 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-lg p-1",
+      // max-w-full + overflow-x-auto lets the tab bar scroll instead of being
+      // clipped by the page's overflow-x-hidden on narrow phones (the labels are
+      // whitespace-nowrap). Scrollbar is hidden for a clean look. justify-start
+      // is visually identical to center here since the bar is sized to content.
+      "inline-flex h-10 max-w-full items-center justify-start overflow-x-auto rounded-lg p-1",
+      "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       "bg-gray-100 border border-gray-200",
       "dark:bg-white/5 dark:border-white/8",
       className
